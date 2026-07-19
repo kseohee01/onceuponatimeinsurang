@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surang 책방지기 | 관리자 페이지</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Instrument+Sans:wght@400;500;600;700&family=Nanum+Myeongjo:wght@700;800&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/admin.css?v=3">
+</head>
+<body>
+
+  <!-- ADMIN LOGIN VIEW -->
+  <div id="view-login" class="admin-view active">
+    <div class="login-card-frame">
+      <div class="foil-inner">
+        <div class="logo-header">
+          <div class="decor-sparkle"></div>
+          <div class="title-set">
+            <h1>Surang</h1>
+            <p>책방지기 로그인</p>
+          </div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <form id="login-form" class="form-inputs">
+          <div class="input-field">
+            <label for="username">관리자 계정</label>
+            <input type="text" id="username" placeholder="Username" required>
+          </div>
+          <div class="input-field">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" placeholder="Password" required>
+          </div>
+          
+          <button type="submit" class="submit-btn">로그인</button>
+        </form>
+        
+        <span class="login-footer">비밀번호 분실 시 책방지기에게 문의하세요</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN MAIN SYSTEM CONTAINER -->
+  <div id="admin-system-container" class="admin-system-layout">
+    
+    <!-- Shared Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="logo">
+          <div class="logo-badge"></div>
+          <span class="logo-text">Surang</span>
+        </div>
+        <nav class="nav-list">
+          <a href="#" class="sidebar-item active" id="menu-dashboard">
+            <span class="menu-icon icon-dashboard"></span>
+            <span>도서 관리</span>
+          </a>
+          <a href="index.html" class="sidebar-item" target="_blank">
+            <span class="menu-icon icon-home"></span>
+            <span>사용자 페이지 ↗</span>
+          </a>
+        </nav>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="user-profile">
+          <div class="avatar"></div>
+          <div class="user-details">
+            <span class="username-display">책방지기</span>
+            <button id="btn-logout" class="logout-btn">로그아웃</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- VIEW 1: DASHBOARD VIEW -->
+    <main id="view-dashboard" class="main-content active">
+      <div class="panel-header-row">
+        <div class="panel-header">
+          <h2>책 관리 대시보드</h2>
+          <p>동화책 책장에 나열된 도서들의 상태 및 상세 페이지를 관리합니다.</p>
+        </div>
+        <button id="btn-add-new" class="add-new-btn">
+          <span>새 책 추가</span>
+          <span class="plus-icon"></span>
+        </button>
+      </div>
+
+      <div class="dashboard-split-container">
+        <!-- Left: Table List -->
+        <section class="main-table-panel">
+          <div class="filter-search-row">
+            <div class="search-box">
+              <span class="search-icon"></span>
+              <input type="text" id="search-input" placeholder="제목 또는 카테고리 검색...">
+            </div>
+            <div class="dropdown-box">
+              <select id="concept-filter">
+                <option value="">전체 카테고리</option>
+                <option value="세계 명작">세계 명작</option>
+                <option value="환상 동화">환상 동화</option>
+                <option value="감성 소설">감성 소설</option>
+                <option value="모험 판타지">모험 판타지</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">썸네일</th>
+                  <th>페어명</th>
+                  <th>참여 캐릭터</th>
+                  <th>동화 컨셉</th>
+                  <th style="width: 80px;">상태</th>
+                  <th style="width: 100px;">작업</th>
+                </tr>
+              </thead>
+              <tbody id="books-table-body">
+                <!-- Rows injected dynamically -->
+              </tbody>
+            </table>
+            <div class="table-pagination">
+              <span class="pagination-info" id="pagination-info">총 0개의 도서 중 1-5 표시 중</span>
+              <div class="pagination-pages" id="pagination-pages">
+                <!-- Pages injected dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Edit Form Panel -->
+        <aside class="edit-panel-sidebar" id="edit-form-panel">
+          <div class="editor-header">
+            <h3>도서 상세 편집</h3>
+            <p>선택된 동화책의 레이아웃 요소를 수정합니다.</p>
+            <div class="line"></div>
+          </div>
+
+          <form id="book-edit-form" class="editor-form-scroll">
+            <input type="hidden" id="edit-book-id">
+
+            <div class="input-field">
+              <label for="edit-title">페어명 / 제목</label>
+              <input type="text" id="edit-title" required placeholder="비밀의 화원 : 만개하는 감성">
+            </div>
+
+            <div class="input-field">
+              <label for="edit-subtitle">부제목 (영문 등)</label>
+              <input type="text" id="edit-subtitle" placeholder="The Secret Garden">
+            </div>
+
+            <div class="input-field">
+              <label for="edit-spine-title">책등 노출 제목</label>
+              <input type="text" id="edit-spine-title" placeholder="신비로운 숲">
+            </div>
+
+            <div class="input-field">
+              <label>참여 캐릭터 (Hashtags)</label>
+              <div class="character-chips-container" id="character-chips-area">
+                <!-- Chips injected dynamically -->
+                <input type="text" id="character-chip-input" placeholder="이름 입력 후 Enter">
+              </div>
+            </div>
+
+            <div class="input-field">
+              <label for="edit-concept">동화 컨셉</label>
+              <select id="edit-concept" required>
+                <option value="세계 명작">세계 명작</option>
+                <option value="환상 동화">환상 동화</option>
+                <option value="감성 소설">감성 소설</option>
+                <option value="모험 판타지">모험 판타지</option>
+              </select>
+            </div>
+
+            <div class="input-field">
+              <label for="edit-contact">대표자 연락처</label>
+              <input type="text" id="edit-contact" placeholder="010-1234-5678">
+              <span class="input-desc">* 메인 사이트에 노출되지 않습니다</span>
+            </div>
+
+            <div class="upload-field-row">
+              <label>책등 이미지</label>
+              <div class="compact-upload-ui">
+                <input type="file" id="upload-spine-img" accept="image/*" class="file-input-hidden">
+                <button type="button" class="btn-compact-upload" onclick="document.getElementById('upload-spine-img').click()">파일 선택</button>
+                <span class="upload-filename" id="filename-spine-img">선택된 파일 없음</span>
+              </div>
+            </div>
+
+            <div class="upload-field-row">
+              <label>펼친 책 이미지</label>
+              <div class="compact-upload-ui">
+                <input type="file" id="upload-cover-img" accept="image/*" class="file-input-hidden">
+                <button type="button" class="btn-compact-upload" onclick="document.getElementById('upload-cover-img').click()">파일 선택</button>
+                <span class="upload-filename" id="filename-cover-img">선택된 파일 없음</span>
+              </div>
+            </div>
+
+            <div class="upload-field-row">
+              <label>상세페이지 이미지</label>
+              <div class="compact-upload-ui">
+                <input type="file" id="upload-detail-bg-img" accept="image/*" class="file-input-hidden">
+                <button type="button" class="btn-compact-upload" onclick="document.getElementById('upload-detail-bg-img').click()">파일 선택</button>
+                <span class="upload-filename" id="filename-detail-bg-img">선택된 파일 없음</span>
+              </div>
+            </div>
+
+            <button type="button" id="btn-edit-detail-page" class="detail-edit-redirect-btn">
+              <span>상세페이지 디테일 수정 →</span>
+            </button>
+
+            <div class="editor-actions">
+              <button type="button" id="btn-cancel-edit" class="cancel-btn">취소</button>
+              <button type="submit" class="save-btn">저장하기</button>
+            </div>
+          </form>
+        </aside>
+      </div>
+    </main>
+
+    <!-- VIEW 2: DETAIL EDIT VIEW -->
+    <main id="view-detail-edit" class="main-content">
+      <div class="panel-header">
+        <button id="btn-back-to-list" class="back-to-list-btn">
+          <span class="arrow-left-icon"></span>
+          <span>책 관리로 돌아가기</span>
+        </button>
+        <h2 id="detail-edit-book-title">상세페이지 디테일 편집</h2>
+        <p>배경 및 말풍선 오버레이 요소를 드래그 및 속성 선택으로 실시간 편집합니다.</p>
+      </div>
+
+      <div class="detail-edit-split-container">
+        <!-- Left: Preview Canvas -->
+        <section class="left-preview-section">
+          <h4>미리보기 (Preview Canvas) <span class="canvas-hint">(말풍선을 클릭하여 드래그해보세요)</span></h4>
+          <div class="canvas-wrapper-outer">
+            <div class="canvas-container" id="preview-canvas-container" style="width: 1920px; height: 1080px;">
+              <!-- Full banner image and gradient loaded dynamically -->
+              <div class="canvas-banner-bg" id="canvas-bg-img"></div>
+              <div class="canvas-gradient-overlay" id="canvas-gradient-overlay"></div>
+              <div class="canvas-bubbles-overlay" id="canvas-bubbles-area">
+                <!-- Draggable bubbles injected dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Detail Edit Panel -->
+        <aside class="right-editor-panel">
+          <div class="editor-header">
+            <h3>상세페이지 디테일 편집</h3>
+            <p>배경 톤 및 캐릭터 말풍선 대사를 추가하고 정렬합니다.</p>
+            <div class="line"></div>
+          </div>
+
+          <div class="editor-form-scroll">
+            
+            <!-- Quote Manager Section -->
+            <div class="quote-manager-section">
+              <label>캐릭터 한마디 추가</label>
+              <div class="input-row">
+                <input type="text" id="new-quote-input" placeholder="대사를 입력하세요...">
+                <button type="button" id="btn-add-quote" class="add-btn">+ 추가</button>
+              </div>
+              
+              <div class="quotes-list-wrapper">
+                <label>말풍선 목록 및 꼬리 방향</label>
+                <div class="quotes-list" id="edit-quotes-list-container">
+                  <!-- Quote rows injected dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <div class="line"></div>
+
+            <!-- Background Gradient Customizer Section -->
+            <div class="bg-color-section">
+              <label>배경 컬러 수정</label>
+              <div class="gradient-preview-container" id="edit-gradient-preview"></div>
+              
+              <div class="color-details-row">
+                <div class="color-swatch-input">
+                  <span class="color-label">시작 색상</span>
+                  <div class="swatch-wrapper">
+                    <input type="color" id="edit-color-1" value="#2DD4BF">
+                    <input type="text" id="edit-color-1-text" value="#2DD4BF">
+                  </div>
+                </div>
+                
+                <div class="color-swatch-input">
+                  <span class="color-label">종료 색상</span>
+                  <div class="swatch-wrapper">
+                    <input type="color" id="edit-color-2" value="#0F766E">
+                    <input type="text" id="edit-color-2-text" value="#0F766E">
+                  </div>
+                </div>
+              </div>
+
+              <div class="gradient-control-row">
+                <div class="gradient-control-item">
+                  <label for="edit-gradient-dir">그라디언트 방향</label>
+                  <select id="edit-gradient-dir">
+                    <option value="0deg">↑ 0°</option>
+                    <option value="45deg">↗ 45°</option>
+                    <option value="90deg">→ 90°</option>
+                    <option value="135deg">↘ 135°</option>
+                    <option value="180deg">↓ 180°</option>
+                    <option value="225deg">↙ 225°</option>
+                    <option value="270deg">← 270°</option>
+                    <option value="315deg">↖ 315°</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="opacity-sliders">
+                <div class="opacity-label-row">
+                  <span>오버레이 불투명도</span>
+                  <span id="opacity-val-label">90%</span>
+                </div>
+                <input type="range" id="edit-overlay-opacity" min="0" max="100" value="90" class="range-slider">
+              </div>
+            </div>
+
+            <!-- Editor actions -->
+            <div class="editor-actions">
+              <button type="button" id="btn-cancel-detail" class="cancel-btn">취소</button>
+              <button type="button" id="btn-save-detail" class="save-btn">저장하기</button>
+            </div>
+
+          </div>
+        </aside>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Database & Admin Logic Scripts -->
+  <script src="js/db.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
