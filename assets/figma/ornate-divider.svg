@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="205.773" height="16" viewBox="0 0 205.773 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="[img] ornate-divider">
+<path id="[img] divider-line-left" d="M0 8L2.88675 10.8868L5.7735 8L2.88675 5.11325L0 8ZM86.8868 8.5C87.1629 8.5 87.3868 8.27614 87.3868 8C87.3868 7.72386 87.1629 7.5 86.8868 7.5V8V8.5ZM2.88675 8V8.5H86.8868V8V7.5H2.88675V8Z" fill="#CCB197"/>
+<path id="[img] divider-star" d="M102.887 0L103.826 7.06096L110.887 8L103.826 8.93904L102.887 16L101.948 8.93904L94.8868 8L101.948 7.06096L102.887 0Z" fill="#CCB197"/>
+<path id="[img] divider-line-right" d="M118.887 7.5C118.611 7.5 118.387 7.72386 118.387 8C118.387 8.27614 118.611 8.5 118.887 8.5V8V7.5ZM205.774 8L202.887 5.11325L200 8L202.887 10.8868L205.774 8ZM118.887 8V8.5H202.887V8V7.5H118.887V8Z" fill="#CCB197"/>
+</g>
+</svg>

@@ -3,189 +3,127 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Once Upon a Time in Surang | 동화 테마 책장 포트폴리오</title>
-  <!-- SEO Meta Tags -->
-  <meta name="description" content="수랑고등학교 동화 테마 합작 - Once Upon a Time in Surang. 다크 럭셔리와 골드 데코레이션으로 어우러진 동화 테마 책장 포트폴리오 사이트입니다.">
-  
-  <!-- Fonts -->
+  <meta name="description" content="수랑고등학교 동화 AU 페어 이야기 책장">
+  <title>Once Upon a Time in Surang</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="css/index.css?v=3">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Fredericka+the+Great&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Instrument+Sans:wght@400;500;600&family=Marcellus+SC&family=Nanum+Myeongjo:wght@400;700;800&family=Rochester&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/index.css?v=4">
 </head>
 <body>
-  <!-- Canvas for Fairy Tale Magic Dust Particles -->
-  <canvas id="magic-dust-canvas"></canvas>
+  <canvas id="magic-dust-canvas" aria-hidden="true"></canvas>
+  <div id="app-toast" class="app-toast" role="status" aria-live="polite"></div>
 
-  <!-- INTRO PAGE -->
-  <section id="view-intro" class="view-section active">
-    <div class="dust-layer"></div>
-    <div class="book-cover-frame">
-      <div class="foil-inner">
-        <div class="top-decorations">
-          <span class="est-year">Est. 2024</span>
-          <div class="sparkle-icon"></div>
+  <section id="view-intro" class="view-section active intro-view" aria-label="인트로">
+    <div class="ambient-photo" aria-hidden="true"></div>
+    <img class="window-light intro-window" src="assets/figma/window-light.svg" alt="">
+    <img class="dust-art" src="assets/figma/dust-particles.svg" alt="">
+
+    <div class="intro-book">
+      <div class="intro-book-inner">
+        <img class="school-emblem" src="assets/figma/school-emblem.png" alt="">
+        <p class="intro-edition">2026 SURANG</p>
+        <div class="intro-title" aria-label="Once Upon a Time in Surang">
+          <span class="intro-title-small">Once Upon a Time</span>
+          <span class="intro-title-mid">in</span>
+          <span class="intro-title-large">SuranG</span>
         </div>
-        
-        <div class="title-group">
-          <h1 class="main-title">Once Upon a Time<br>in Surang</h1>
-          <p class="sub-title">수랑고등학교 동화 테마 합작</p>
-        </div>
-        
-        <div class="ornate-divider">
-          <div class="divider-line left-line"></div>
-          <div class="sparkle-dot"></div>
-          <div class="divider-line right-line"></div>
-        </div>
-        
-        <div class="prompt-group">
-          <button id="btn-enter" class="open-button" aria-label="책장 입장하기">
-            <span>입장</span>
-          </button>
-          <span class="school-name">Surang High School</span>
-        </div>
+        <p class="intro-subtitle">SURANG HIGHSCHOOL FAIRYTALE AU</p>
+        <img class="intro-divider" src="assets/figma/ornate-divider.svg" alt="">
+        <button id="btn-enter" class="start-button" type="button">
+          <span>START</span>
+          <img src="assets/figma/arrow-right.svg" alt="">
+        </button>
+        <p class="intro-school">Surang High School</p>
       </div>
     </div>
   </section>
 
-  <!-- MAIN BOOKSHELF PAGE -->
-  <section id="view-bookshelf" class="view-section">
-    <!-- Header -->
-    <header class="site-header">
-      <div class="logo" id="header-logo-home">
-        <div class="logo-badge"></div>
-        <span class="logo-text">이야기 책장</span>
-      </div>
-      <nav class="navigation">
-        <a href="#" class="nav-item active" id="nav-shelf">책장 보기</a>
-        <a href="#" class="nav-item" id="nav-archive">이야기 보관소</a>
-        <a href="#" class="nav-item" id="nav-author">책방지기 소개</a>
-        <a href="admin.html" class="header-cta" id="btn-admin-go">관리자</a>
+  <section id="view-bookshelf" class="view-section shelf-view" aria-label="이야기 책장">
+    <div class="ambient-photo" aria-hidden="true"></div>
+    <img class="window-light shelf-window" src="assets/figma/shelf-window-light.svg" alt="">
+
+    <header class="public-header">
+      <button id="header-logo-home" class="public-logo" type="button" aria-label="처음으로">
+        <img src="assets/figma/shelf-star.svg" alt="">
+        <span>SURANG HIGHSCHOOL</span>
+      </button>
+      <nav class="public-nav" aria-label="주요 메뉴">
+        <button id="btn-minigame" type="button">MINIGAME</button>
+        <button id="btn-guest-note" class="guest-note-button" type="button">GUEST NOTE</button>
       </nav>
     </header>
 
-    <!-- Shelves Stack -->
-    <main class="shelves-container">
-      <div class="shelves-stack" id="shelves-stack-container">
-        <!-- Shelf 1 -->
-        <div class="shelf-and-beam" data-shelf="0">
-          <div class="books-container" id="shelf-books-0"></div>
-          <div class="wood-beam"></div>
-        </div>
-        <!-- Shelf 2 -->
-        <div class="shelf-and-beam" data-shelf="1">
-          <div class="books-container" id="shelf-books-1"></div>
-          <div class="wood-beam"></div>
-        </div>
-        <!-- Shelf 3 -->
-        <div class="shelf-and-beam" data-shelf="2">
-          <div class="books-container" id="shelf-books-2"></div>
-          <div class="wood-beam"></div>
-        </div>
-      </div>
+    <main class="shelves-stage">
+      <div id="shelves-list" class="shelves-list"></div>
     </main>
   </section>
 
-  <!-- BOOK POPUP MODAL -->
-  <div id="popup-modal" class="modal-overlay">
-    <div class="book-popup-container">
-      <!-- Left Page Container (Pivoted from Right Edge) -->
-      <div class="book-page-outer-left">
-        <div class="book-spread-left">
-          <div class="book-left-page">
-            <div class="cover-art-border">
-              <img id="popup-cover-img" src="assets/images/popup-cover-image.png" alt="도서 표지 일러스트">
-            </div>
-            <span class="book-design-no" id="popup-design-no">Book Design No. 01</span>
-          </div>
-          <div class="crease-shadow"></div>
+  <div id="popup-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="popup-book-title">
+    <div class="popup-scrim"></div>
+    <article class="open-book">
+      <div class="popup-page popup-page-left">
+        <div class="popup-cover">
+          <img id="popup-cover-img" src="assets/figma/popup-cover-art.png" alt="">
+          <div class="popup-cover-shade"></div>
+          <p id="popup-project-label" class="popup-project-label">페어명</p>
+          <img class="popup-cover-divider" src="assets/figma/popup-divider.svg" alt="">
         </div>
       </div>
-
-      <!-- Right Page Container (Pivoted from Left Edge) -->
-      <div class="book-page-outer-right">
-        <div class="book-spread-right">
-          <div class="book-right-page">
-            <div class="popup-info-header">
-              <div class="character-names-row" id="popup-characters-row">
-                <span>캐릭터 이름</span>
-                <span class="character-divider">X</span>
-                <span>캐릭터 이름</span>
-              </div>
-              <h2 class="popup-book-title" id="popup-book-title">비밀의 화원</h2>
-              <span class="popup-book-subtitle" id="popup-book-subtitle">The Secret Garden</span>
-            </div>
-
-            <div class="ornate-divider-popup">
-              <div class="divider-line left-line"></div>
-              <div class="sparkle-dot"></div>
-              <div class="divider-line right-line"></div>
-            </div>
-
-            <div class="desc-container">
-              <p class="popup-book-desc" id="popup-book-desc">
-                비밀의 화원은 잃어버린 감성과 따뜻한 기억을 찾아가는 과정을 수채화 드로잉과 감성적인 타이포그래피로 연출한 웹 북 포트폴리오입니다.
-              </p>
-            </div>
-
-            <div class="popup-actions">
-              <button id="btn-read-more" class="read-more-btn">
-                <span>이야기 들여다보기</span>
-                <span class="arrow-right-icon"></span>
-              </button>
-              <button id="btn-process" class="secondary-btn">작업 과정</button>
-            </div>
-          </div>
-          <button id="btn-close-popup" class="close-btn-wrapper" aria-label="팝업 닫기">
-            <img src="assets/images/close-btn.png" alt="Close">
+      <div class="popup-gutter" aria-hidden="true"></div>
+      <div class="popup-page popup-page-right">
+        <button id="btn-close-popup" class="popup-close" type="button" aria-label="팝업 닫기">
+          <img src="assets/figma/x-circle.svg" alt="">
+        </button>
+        <div class="popup-copy">
+          <p id="popup-characters-row" class="popup-characters">캐릭터 이름 X 캐릭터 이름</p>
+          <p id="popup-book-subtitle" class="popup-english">The Secret Garden</p>
+          <h2 id="popup-book-title" class="popup-title">비밀의 화원</h2>
+          <img class="popup-divider" src="assets/figma/popup-divider.svg" alt="">
+          <p id="popup-book-desc" class="popup-description"></p>
+          <button id="btn-read-more" class="open-story-button" type="button">
+            <span>OPEN</span>
+            <img src="assets/figma/arrow-right.svg" alt="">
           </button>
+          <button id="btn-process" class="process-link" type="button">작업 과정 보기</button>
         </div>
       </div>
-    </div>
+    </article>
   </div>
 
-  <!-- DETAIL PAGE -->
-  <section id="view-detail" class="view-section">
-    <!-- Detail Sub Header -->
-    <header class="sub-header">
-      <button id="btn-back-to-shelf" class="back-to-bookshelf">
-        <span class="arrow-left-icon"></span>
-        <span>책장으로 돌아가기</span>
-      </button>
-      <div class="deco-text">Surang HighSchool</div>
-    </header>
+  <section id="view-detail" class="view-section detail-view" aria-label="책 상세">
+    <div class="ambient-photo" aria-hidden="true"></div>
+    <div id="detail-backdrop" class="detail-backdrop"></div>
+    <div id="detail-hero" class="detail-hero">
+      <div id="detail-bg-img" class="detail-hero-image"></div>
+      <div id="detail-gradient-overlay" class="detail-gradient-overlay"></div>
+    </div>
 
-    <!-- Frame Wrapper to position below header and fit/center screen -->
-    <div class="detail-frame-outer-wrapper">
-      <!-- 16:9 Aspect Ratio Container for Responsive Cover scaling -->
-      <div class="detail-aspect-ratio-container">
-        <!-- Hero Banner Fullscreen Illustration -->
-        <div class="hero-banner-container" id="detail-banner-container">
-          <!-- Full-bleed background is styled dynamically -->
-          <div class="hero-banner-image" id="detail-bg-img"></div>
-        </div>
-
-        <!-- Background Gradient Overlay (Adjusted dynamically by admin config) -->
-        <div class="detail-gradient-overlay" id="detail-gradient-overlay"></div>
-
-        <!-- Bubble Overlay Container -->
-        <div class="bubble-overlay-container" id="bubble-container">
-          <!-- Bubbles will be injected dynamically -->
-        </div>
+    <div id="detail-ui-layer" class="detail-ui-layer">
+      <header class="detail-header">
+        <button id="btn-back-to-shelf" class="detail-back" type="button">
+          <img src="assets/figma/arrow-right.svg" alt="">
+          <span>BACK</span>
+        </button>
+        <span class="detail-school">SURANG HIGHSCHOOL</span>
+      </header>
+      <div id="bubble-container" class="bubble-container"></div>
+      <div class="detail-bottom-shade"></div>
+      <div class="detail-meta">
+        <p id="detail-characters" class="detail-characters"></p>
+        <p id="detail-subtitle" class="detail-subtitle"></p>
+        <h1 id="detail-title" class="detail-title"></h1>
+        <p id="detail-description" class="detail-description"></p>
       </div>
     </div>
 
-    <!-- UI Toggle Overlay Button -->
-    <button id="btn-ui-toggle" class="ui-toggle-btn">
-      <div class="toggle-switch-icon" id="ui-toggle-switch"></div>
-      <div class="eye-icon"></div>
-      <span class="ui-text">UI</span>
+    <button id="btn-ui-toggle" class="ui-toggle-button" type="button" aria-pressed="true">
+      <img src="assets/figma/eye.svg" alt="">
+      <span>UI</span>
+      <img id="ui-toggle-switch" src="assets/figma/toggle-switch.svg" alt="">
     </button>
   </section>
 
-  <!-- Database & Logic Scripts -->
   <script src="js/db.js"></script>
   <script src="js/index.js"></script>
 </body>

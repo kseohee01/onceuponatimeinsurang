@@ -1,860 +1,699 @@
-// Admin Management Logic
+document.addEventListener('DOMContentLoaded', () => {
+  const SESSION_KEY = 'surang_admin_session_v2';
+  const PAGE_SIZE = 5;
+  const loginView = document.getElementById('login-view');
+  const adminShell = document.getElementById('admin-shell');
+  const dashboardView = document.getElementById('dashboard-view');
+  const detailEditorView = document.getElementById('detail-editor-view');
+  const bookInspector = document.getElementById('book-inspector');
+  const bookForm = document.getElementById('book-form');
+  const toast = document.getElementById('admin-toast');
 
-// Session State check
-const AUTH_KEY = 'surang_admin_auth';
-let currentEditingBook = null;
-let tempQuotesList = []; // Copy of quotes for detail editor
-let selectedQuoteId = null; // Currently selected quote in detail editor
-let canvasScale = 0.333333; // Dynamic scale factor based on screen size
+  let currentPage = 1;
+  let selectedBookId = null;
+  let editorBook = null;
+  let characters = [];
+  let spineImage = '';
+  let coverImage = '';
+  let detailBgImage = '';
+  let editorQuotes = [];
+  let selectedQuoteId = null;
+  let toastTimer = null;
+  let draggedQuoteId = null;
 
-function resizeCanvasContainer() {
-  const wrapper = document.querySelector('.canvas-wrapper-outer');
-  const container = document.getElementById('preview-canvas-container');
-  if (wrapper && container) {
-    const wrapperWidth = wrapper.offsetWidth;
-    canvasScale = wrapperWidth / 1920;
-    container.style.transform = `scale(${canvasScale})`;
-  }
-}
-window.addEventListener('resize', resizeCanvasContainer);
+  const field = (id) => document.getElementById(id);
 
-// Pagination State
-let currentPage = 1;
-const rowsPerPage = 5;
-
-// DOM Elements
-const viewLogin = document.getElementById('view-login');
-const adminSystemContainer = document.getElementById('admin-system-container');
-const viewDashboard = document.getElementById('view-dashboard');
-const viewDetailEdit = document.getElementById('view-detail-edit');
-
-// Edit Form fields
-const editBookId = document.getElementById('edit-book-id');
-const editTitle = document.getElementById('edit-title');
-const editSubtitle = document.getElementById('edit-subtitle');
-const editSpineTitle = document.getElementById('edit-spine-title');
-const editConcept = document.getElementById('edit-concept');
-const editContact = document.getElementById('edit-contact');
-const characterChipsArea = document.getElementById('character-chips-area');
-const characterChipInput = document.getElementById('character-chip-input');
-
-let currentCharacters = [];
-
-// Base64 storage placeholders
-let uploadedSpineImage = '';
-let uploadedCoverImage = '';
-let uploadedDetailBgImage = '';
-
-// -------------------------------------------------------------
-// 1. AUTHENTICATION & VIEWS
-// -------------------------------------------------------------
-function checkAuth() {
-  const isAuth = sessionStorage.getItem(AUTH_KEY);
-  if (isAuth === 'true') {
-    viewLogin.classList.remove('active');
-    adminSystemContainer.classList.add('active');
-    renderBooksTable();
-    resetEditForm();
-  } else {
-    viewLogin.classList.add('active');
-    adminSystemContainer.classList.remove('active');
-  }
-}
-
-document.getElementById('login-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const user = document.getElementById('username').value;
-  const pass = document.getElementById('password').value;
-
-  // Simple hardcoded credentials
-  if (user === 'admin' && pass === 'surang1234') {
-    sessionStorage.setItem(AUTH_KEY, 'true');
-    checkAuth();
-  } else {
-    alert('계정 또는 비밀번호가 틀렸습니다.');
-  }
-});
-
-document.getElementById('btn-logout').addEventListener('click', () => {
-  sessionStorage.removeItem(AUTH_KEY);
-  checkAuth();
-});
-
-// -------------------------------------------------------------
-// 2. DASHBOARD BOOK TABLE LIST
-// -------------------------------------------------------------
-function renderBooksTable() {
-  const tableBody = document.getElementById('books-table-body');
-  tableBody.innerHTML = '';
-
-  const searchQuery = document.getElementById('search-input').value.toLowerCase();
-  const conceptFilter = document.getElementById('concept-filter').value;
-
-  let filtered = getBooks();
-
-  // Apply filters
-  if (searchQuery) {
-    filtered = filtered.filter(b => 
-      b.title.toLowerCase().includes(searchQuery) || 
-      b.concept.toLowerCase().includes(searchQuery) ||
-      (b.participatingCharacters && b.participatingCharacters.some(c => c.toLowerCase().includes(searchQuery)))
-    );
-  }
-  if (conceptFilter) {
-    filtered = filtered.filter(b => b.concept === conceptFilter);
+  function showToast(message) {
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.add('show');
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
   }
 
-  // Pagination bounds
-  const totalItems = filtered.length;
-  const totalPages = Math.ceil(totalItems / rowsPerPage) || 1;
-  if (currentPage > totalPages) currentPage = totalPages;
-
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const endIndex = Math.min(startIndex + rowsPerPage, totalItems);
-  const paginatedItems = filtered.slice(startIndex, endIndex);
-
-  // Update pagination info label
-  document.getElementById('pagination-info').textContent = 
-    `총 ${totalItems}개의 도서 중 ${totalItems > 0 ? startIndex + 1 : 0}-${endIndex} 표시 중`;
-
-  // Render pages
-  const pageContainer = document.getElementById('pagination-pages');
-  pageContainer.innerHTML = '';
-  for (let i = 1; i <= totalPages; i++) {
-    const pageLink = document.createElement('button');
-    pageLink.className = `page-link ${i === currentPage ? 'active' : ''}`;
-    pageLink.textContent = i;
-    pageLink.addEventListener('click', () => {
-      currentPage = i;
-      renderBooksTable();
-    });
-    pageContainer.appendChild(pageLink);
+  function openSession() {
+    sessionStorage.setItem(SESSION_KEY, 'true');
+    loginView.hidden = true;
+    adminShell.hidden = false;
+    const firstBook = getBooks()[0];
+    selectedBookId = firstBook?.id || null;
+    renderDashboard();
+    if (firstBook) loadBookIntoForm(firstBook);
+    else resetBookForm();
   }
 
-  if (paginatedItems.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-placeholder);">검색 결과가 없습니다.</td></tr>`;
-    return;
+  function closeSession() {
+    sessionStorage.removeItem(SESSION_KEY);
+    adminShell.hidden = true;
+    loginView.hidden = false;
+    field('login-password').value = '';
+    field('login-error').textContent = '';
   }
 
-  paginatedItems.forEach(book => {
-    const row = document.createElement('tr');
-
-    // Thumbnail column
-    const spineBg = book.spineImage ? `background-image: url(${book.spineImage}); background-size: cover;` : `background-color: ${book.spineColor || '#B27171'};`;
-    const thumbnailCell = `
-      <td>
-        <div class="mini-spine-preview" style="${spineBg}">
-          ${book.spineImage ? '' : `<span>${book.spineTitle || book.title}</span>`}
-        </div>
-      </td>
-    `;
-
-    // Title & Sub
-    const titleCell = `
-      <td>
-        <strong>${book.title}</strong><br>
-        <small style="color: var(--text-muted);">${book.subtitle || ''}</small>
-      </td>
-    `;
-
-    // Characters Chips list
-    const charsList = book.participatingCharacters && book.participatingCharacters.length > 0
-      ? book.participatingCharacters.map(c => `#${c}`).join(', ')
-      : '없음';
-    const charactersCell = `<td>${charsList}</td>`;
-
-    // Concept
-    const conceptCell = `<td>${book.concept}</td>`;
-
-    // Status switch
-    const statusCell = `
-      <td>
-        <button class="switch-status-btn ${book.status === 'active' ? 'active' : ''}" 
-                onclick="toggleBookStatus('${book.id}')" aria-label="상태 전환"></button>
-      </td>
-    `;
-
-    // Action buttons
-    const actionsCell = `
-      <td>
-        <div class="table-actions">
-          <button class="btn-icon" onclick="editBookForm('${book.id}')" title="편집">
-            <span class="icon-edit-pencil"></span>
-          </button>
-          <button class="btn-icon delete" onclick="confirmDeleteBook('${book.id}')" title="삭제">
-            <span class="icon-delete-trash"></span>
-          </button>
-        </div>
-      </td>
-    `;
-
-    row.innerHTML = thumbnailCell + titleCell + charactersCell + conceptCell + statusCell + actionsCell;
-    tableBody.appendChild(row);
-  });
-}
-
-// Add filter event listeners
-document.getElementById('search-input').addEventListener('input', () => {
-  currentPage = 1;
-  renderBooksTable();
-});
-document.getElementById('concept-filter').addEventListener('change', () => {
-  currentPage = 1;
-  renderBooksTable();
-});
-
-// Toggle active/inactive status
-window.toggleBookStatus = function(bookId) {
-  const book = getBookById(bookId);
-  if (book) {
-    book.status = book.status === 'active' ? 'inactive' : 'active';
-    updateBook(book);
-    renderBooksTable();
-  }
-};
-
-window.confirmDeleteBook = function(bookId) {
-  const book = getBookById(bookId);
-  if (book && confirm(`"${book.title}" 도서를 정말로 삭제하시겠습니까?`)) {
-    deleteBook(bookId);
-    renderBooksTable();
-    resetEditForm();
-  }
-};
-
-// -------------------------------------------------------------
-// 3. EDIT FORM SIDEBAR CONTROLS
-// -------------------------------------------------------------
-function resetEditForm() {
-  currentEditingBook = null;
-  editBookId.value = '';
-  editTitle.value = '';
-  editSubtitle.value = '';
-  editSpineTitle.value = '';
-  editConcept.value = '세계 명작';
-  editContact.value = '';
-  
-  currentCharacters = [];
-  renderChips();
-
-  uploadedSpineImage = '';
-  uploadedCoverImage = '';
-  uploadedDetailBgImage = '';
-
-  document.getElementById('filename-spine-img').textContent = '선택된 파일 없음';
-  document.getElementById('filename-cover-img').textContent = '선택된 파일 없음';
-  document.getElementById('filename-detail-bg-img').textContent = '선택된 파일 없음';
-
-  document.getElementById('upload-spine-img').value = '';
-  document.getElementById('upload-cover-img').value = '';
-  document.getElementById('upload-detail-bg-img').value = '';
-
-  document.getElementById('btn-edit-detail-page').style.display = 'block';
-  document.getElementById('edit-form-panel').querySelector('h3').textContent = '새 도서 추가';
-}
-
-document.getElementById('btn-add-new').addEventListener('click', resetEditForm);
-document.getElementById('btn-cancel-edit').addEventListener('click', resetEditForm);
-
-window.editBookForm = function(bookId) {
-  const book = getBookById(bookId);
-  if (!book) return;
-
-  currentEditingBook = book;
-  editBookId.value = book.id;
-  editTitle.value = book.title;
-  editSubtitle.value = book.subtitle || '';
-  editSpineTitle.value = book.spineTitle || '';
-  editConcept.value = book.concept || '세계 명작';
-  editContact.value = book.contact || '';
-
-  currentCharacters = [...(book.participatingCharacters || [])];
-  renderChips();
-
-  uploadedSpineImage = book.spineImage || '';
-  uploadedCoverImage = book.coverImage || '';
-  uploadedDetailBgImage = book.detailBgImage || '';
-
-  document.getElementById('filename-spine-img').textContent = book.spineImage ? '이미지 업로드됨' : '선택된 파일 없음';
-  document.getElementById('filename-cover-img').textContent = book.coverImage ? '이미지 업로드됨' : '선택된 파일 없음';
-  document.getElementById('filename-detail-bg-img').textContent = book.detailBgImage ? '이미지 업로드됨' : '선택된 파일 없음';
-
-  document.getElementById('btn-edit-detail-page').style.display = 'block';
-  document.getElementById('edit-form-panel').querySelector('h3').textContent = '도서 상세 편집';
-  
-  // Smooth scroll edit panel into view (mobile)
-  document.getElementById('edit-form-panel').scrollIntoView({ behavior: 'smooth' });
-};
-
-// Character Hashtag Chips logic
-function renderChips() {
-  // Remove existing chips (exclude input)
-  const chips = characterChipsArea.querySelectorAll('.character-chip');
-  chips.forEach(c => c.remove());
-
-  currentCharacters.forEach((char, idx) => {
-    const chip = document.createElement('div');
-    chip.className = 'character-chip';
-    chip.innerHTML = `
-      <span>#${char}</span>
-      <button type="button" class="btn-chip-delete" onclick="deleteChip(${idx})">&times;</button>
-    `;
-    // Insert before input field
-    characterChipsArea.insertBefore(chip, characterChipInput);
-  });
-}
-
-window.deleteChip = function(idx) {
-  currentCharacters.splice(idx, 1);
-  renderChips();
-};
-
-characterChipInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const val = characterChipInput.value.trim().replace('#', '');
-    if (val && !currentCharacters.includes(val)) {
-      currentCharacters.push(val);
-      renderChips();
-    }
-    characterChipInput.value = '';
-  }
-});
-
-// Image Uploads Base64 conversion
-function handleImageUpload(inputEl, callback, labelEl) {
-  inputEl.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        callback(event.target.result);
-        labelEl.textContent = file.name;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-}
-
-handleImageUpload(
-  document.getElementById('upload-spine-img'),
-  (base64) => { uploadedSpineImage = base64; },
-  document.getElementById('filename-spine-img')
-);
-handleImageUpload(
-  document.getElementById('upload-cover-img'),
-  (base64) => { uploadedCoverImage = base64; },
-  document.getElementById('filename-cover-img')
-);
-handleImageUpload(
-  document.getElementById('upload-detail-bg-img'),
-  (base64) => { uploadedDetailBgImage = base64; },
-  document.getElementById('filename-detail-bg-img')
-);
-
-// Submit Edit Form
-document.getElementById('book-edit-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  
-  const id = editBookId.value;
-  const title = editTitle.value.trim();
-  const subtitle = editSubtitle.value.trim();
-  const spineTitle = editSpineTitle.value.trim();
-  const concept = editConcept.value;
-  const contact = editContact.value.trim();
-
-  if (!title) return;
-
-  if (id) {
-    // Modify existing
-    const book = getBookById(id);
-    if (book) {
-      book.title = title;
-      book.subtitle = subtitle;
-      book.spineTitle = spineTitle;
-      book.concept = concept;
-      book.contact = contact;
-      book.participatingCharacters = currentCharacters;
-      book.spineImage = uploadedSpineImage;
-      book.coverImage = uploadedCoverImage;
-      book.detailBgImage = uploadedDetailBgImage;
-
-      updateBook(book);
-      alert('도서 정보가 수정되었습니다.');
-    }
-  } else {
-    // Create new
-    const newBook = {
-      title,
-      subtitle,
-      spineTitle: spineTitle || title,
-      concept,
-      contact,
-      status: 'active',
-      spineHeight: Math.floor(Math.random() * 40) + 220, // Random default height 220~260
-      spineColor: getRandomSpineColor(),
-      participatingCharacters: currentCharacters,
-      spineImage: uploadedSpineImage,
-      coverImage: uploadedCoverImage || 'assets/images/popup-cover-image.png',
-      detailBgImage: uploadedDetailBgImage || 'assets/images/hero-banner-image.png',
-      quotes: [
-        { id: 'q-new-1', text: '캐릭터 한마디', tail: 'C', x: 200, y: 200 }
-      ],
-      bgGradient: {
-        color1: '#2DD4BF',
-        color2: '#0F766E',
-        direction: '135deg',
-        opacity: 90
-      }
-    };
-    addBook(newBook);
-    alert('새 도서가 등록되었습니다.');
-  }
-
-  renderBooksTable();
-  resetEditForm();
-});
-
-function getRandomSpineColor() {
-  const colors = ['#2B4335', '#C98E3A', '#B27171', '#52436D', '#3D5A6C'];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-// -------------------------------------------------------------
-// 4. DETAIL PAGE CANVAS EDITOR VIEW
-// -------------------------------------------------------------
-const btnEditDetailPage = document.getElementById('btn-edit-detail-page');
-const previewCanvasContainer = document.getElementById('preview-canvas-container');
-const canvasBgImg = document.getElementById('canvas-bg-img');
-const canvasGradientOverlay = document.getElementById('canvas-gradient-overlay');
-const canvasBubblesArea = document.getElementById('canvas-bubbles-area');
-
-// Gradient inputs
-const editColor1 = document.getElementById('edit-color-1');
-const editColor1Text = document.getElementById('edit-color-1-text');
-const editColor2 = document.getElementById('edit-color-2');
-const editColor2Text = document.getElementById('edit-color-2-text');
-const editGradientDir = document.getElementById('edit-gradient-dir');
-const editOverlayOpacity = document.getElementById('edit-overlay-opacity');
-const opacityValLabel = document.getElementById('opacity-val-label');
-
-btnEditDetailPage.addEventListener('click', () => {
-  if (!currentEditingBook) {
-    const title = editTitle.value.trim();
-    if (!title) {
-      alert('상세페이지를 편집하려면 먼저 도서 제목(페어명)을 입력해야 합니다.');
+  field('login-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const id = field('login-id').value.trim();
+    const password = field('login-password').value;
+    if (['admin', 'manager_clara'].includes(id) && password === 'surang1234') {
+      openSession();
       return;
     }
-
-    const subtitle = editSubtitle.value.trim();
-    const spineTitle = editSpineTitle.value.trim();
-    const concept = editConcept.value;
-    const contact = editContact.value.trim();
-
-    const newBook = {
-      title,
-      subtitle,
-      spineTitle: spineTitle || title,
-      concept,
-      contact,
-      status: 'active',
-      spineHeight: Math.floor(Math.random() * 40) + 220,
-      spineColor: getRandomSpineColor(),
-      participatingCharacters: currentCharacters,
-      spineImage: uploadedSpineImage,
-      coverImage: uploadedCoverImage || 'assets/images/popup-cover-image.png',
-      detailBgImage: uploadedDetailBgImage || 'assets/images/hero-banner-image.png',
-      quotes: [
-        { id: 'q-new-1', text: '캐릭터 한마디', tail: 'C', x: 200, y: 200 }
-      ],
-      bgGradient: {
-        color1: '#2DD4BF',
-        color2: '#0F766E',
-        direction: '135deg',
-        opacity: 90
-      }
-    };
-
-    const saved = addBook(newBook);
-    currentEditingBook = saved;
-    editBookId.value = saved.id;
-    renderBooksTable();
-  }
-
-  // Toggle layout views
-  viewDashboard.classList.remove('active');
-  viewDetailEdit.classList.add('active');
-
-  // Recalculate dynamic canvas scale based on screen width
-  setTimeout(resizeCanvasContainer, 100);
-
-  // Load book details
-  document.getElementById('detail-edit-book-title').textContent = `${currentEditingBook.title} - 상세페이지 편집`;
-  
-  // Set Canvas Background
-  if (uploadedDetailBgImage) {
-    canvasBgImg.style.backgroundImage = `url(${uploadedDetailBgImage})`;
-  } else {
-    canvasBgImg.style.backgroundImage = 'none';
-  }
-
-  // Load gradient values
-  const gradient = currentEditingBook.bgGradient || { color1: '#2DD4BF', color2: '#0F766E', direction: '135deg', opacity: 90 };
-  editColor1.value = gradient.color1 || '#2DD4BF';
-  editColor1Text.value = gradient.color1 || '#2DD4BF';
-  editColor2.value = gradient.color2 || '#0F766E';
-  editColor2Text.value = gradient.color2 || '#0F766E';
-  editGradientDir.value = gradient.direction || '135deg';
-  editOverlayOpacity.value = gradient.opacity || 90;
-  opacityValLabel.textContent = `${editOverlayOpacity.value}%`;
-
-  // Make copy of quotes
-  tempQuotesList = JSON.parse(JSON.stringify(currentEditingBook.quotes || []));
-  selectedQuoteId = tempQuotesList.length > 0 ? tempQuotesList[0].id : null;
-
-  renderCanvasEditor();
-  loadSelectedQuoteGradient();
-});
-
-// Load Selected Quote's Gradient details into the sidebar controllers
-function loadSelectedQuoteGradient() {
-  const q = tempQuotesList.find(quote => quote.id === selectedQuoteId);
-  if (!q) return;
-
-  const gradient = q.bgGradient || { color1: '#E879F9', color2: '#C084FC', direction: '135deg', opacity: 85 };
-  editColor1.value = gradient.color1 || '#E879F9';
-  editColor1Text.value = (gradient.color1 || '#E879F9').toUpperCase();
-  editColor2.value = gradient.color2 || '#C084FC';
-  editColor2Text.value = (gradient.color2 || '#C084FC').toUpperCase();
-  editGradientDir.value = gradient.direction || '135deg';
-  editOverlayOpacity.value = gradient.opacity || 85;
-  opacityValLabel.textContent = `${editOverlayOpacity.value}%`;
-
-  // Also update compact editor swatch bar
-  const swatchPreview = document.getElementById('edit-gradient-preview');
-  swatchPreview.style.background = `linear-gradient(90deg, ${editColor1.value} 0%, ${editColor2.value} 100%)`;
-}
-
-// Sync HEX Text and Color Picker input
-function syncColorPicker(picker, textEl) {
-  picker.addEventListener('input', () => {
-    textEl.value = picker.value.toUpperCase();
-    updateCanvasGradient();
+    field('login-error').textContent = '아이디 또는 비밀번호를 다시 확인해 주세요.';
   });
-  textEl.addEventListener('change', () => {
-    let val = textEl.value.trim();
-    if (/^#[0-9A-F]{6}$/i.test(val)) {
-      picker.value = val;
-      updateCanvasGradient();
-    }
+
+  field('password-toggle').addEventListener('click', () => {
+    const password = field('login-password');
+    const visible = password.type === 'text';
+    password.type = visible ? 'password' : 'text';
+    field('password-toggle').setAttribute('aria-label', visible ? '비밀번호 보기' : '비밀번호 숨기기');
   });
-}
-syncColorPicker(editColor1, editColor1Text);
-syncColorPicker(editColor2, editColor2Text);
+  field('logout-button').addEventListener('click', closeSession);
 
-editGradientDir.addEventListener('change', updateCanvasGradient);
-editOverlayOpacity.addEventListener('input', () => {
-  opacityValLabel.textContent = `${editOverlayOpacity.value}%`;
-  updateCanvasGradient();
-});
-
-function updateCanvasGradient() {
-  const q = tempQuotesList.find(quote => quote.id === selectedQuoteId);
-  if (!q) return;
-
-  // Save values to the selected quote's bgGradient
-  q.bgGradient = {
-    color1: editColor1.value,
-    color2: editColor2.value,
-    direction: editGradientDir.value,
-    opacity: parseInt(editOverlayOpacity.value)
-  };
-
-  const c1 = hexToRgba(editColor1.value, editOverlayOpacity.value / 100);
-  const c2 = hexToRgba(editColor2.value, editOverlayOpacity.value / 100);
-  const dir = editGradientDir.value;
-  
-  // Clear full background overlay
-  canvasGradientOverlay.style.background = 'none';
-  
-  // Apply colors dynamically to the selected bubble on the preview canvas
-  const bubbleEl = canvasBubblesArea.querySelector(`[data-id="${selectedQuoteId}"]`);
-  if (bubbleEl) {
-    const bDiv = bubbleEl.querySelector('.quote-bubble');
-    if (bDiv) {
-      bDiv.style.background = `linear-gradient(${dir}, ${c1} 0%, ${c2} 100%)`;
-    }
-    bubbleEl.style.setProperty('--bubble-tail-color', c2);
+  function filteredBooks() {
+    const query = field('book-search').value.trim().toLowerCase();
+    const status = field('status-filter').value;
+    return getBooks().filter((book) => {
+      const searchable = [
+        book.title,
+        book.subtitle,
+        book.spineTitle,
+        ...(book.participatingCharacters || [])
+      ].join(' ').toLowerCase();
+      const matchesQuery = !query || searchable.includes(query);
+      const matchesStatus = status === 'all' || book.status === status;
+      return matchesQuery && matchesStatus;
+    });
   }
-  
-  // Also update compact editor swatch bar
-  const swatchPreview = document.getElementById('edit-gradient-preview');
-  swatchPreview.style.background = `linear-gradient(90deg, ${editColor1.value} 0%, ${editColor2.value} 100%)`;
-}
 
-function hexToRgba(hex, alpha) {
-  if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
-    let cleanHex = hex.substring(1);
-    if (cleanHex.length === 3) {
-      cleanHex = cleanHex.split('').map(char => char + char).join('');
-    }
-    const num = parseInt(cleanHex, 16);
-    const r = (num >> 16) & 255;
-    const g = (num >> 8) & 255;
-    const b = num & 255;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  return hex;
-}
+  function renderDashboard() {
+    const books = filteredBooks();
+    const totalPages = Math.max(1, Math.ceil(books.length / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages);
+    const pageBooks = books.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const body = field('book-table-body');
+    body.replaceChildren();
 
-// Render Canvas Bubbles & Quote List Manager
-function renderCanvasEditor() {
-  renderQuotesManagerList();
-  renderDraggableBubbles();
-  resizeCanvasContainer();
-}
+    pageBooks.forEach((book) => {
+      const row = document.createElement('tr');
+      row.classList.toggle('selected', book.id === selectedBookId);
+      row.dataset.bookId = book.id;
 
-function renderQuotesManagerList() {
-  const listContainer = document.getElementById('edit-quotes-list-container');
-  listContainer.innerHTML = '';
+      const bookCell = document.createElement('td');
+      const bookWrap = document.createElement('div');
+      bookWrap.className = 'book-cell';
+      const thumb = document.createElement('span');
+      thumb.className = 'book-thumb';
+      thumb.style.setProperty('--book-color', book.spineColor || '#6d4f3d');
+      if (book.spineImage) thumb.style.backgroundImage = `url("${book.spineImage}")`;
+      const titles = document.createElement('span');
+      const title = document.createElement('strong');
+      title.textContent = book.title;
+      const subtitle = document.createElement('small');
+      subtitle.textContent = book.subtitle || book.spineTitle;
+      titles.append(title, subtitle);
+      bookWrap.append(thumb, titles);
+      bookCell.appendChild(bookWrap);
 
-  tempQuotesList.forEach((q, idx) => {
-    const row = document.createElement('div');
-    row.className = `quote-item-row ${q.id === selectedQuoteId ? 'selected' : ''}`;
-    row.setAttribute('data-quote-id', q.id);
-    row.innerHTML = `
-      <div class="grip-handle" title="순서 드래그"></div>
-      <textarea class="quote-textarea" oninput="updateQuoteText('${q.id}', this.value)" onclick="event.stopPropagation();" placeholder="대사를 입력해 주세요.">${q.text}</textarea>
-      <button type="button" class="tail-select-btn" onclick="cycleTail('${q.id}'); event.stopPropagation();">꼬리: ${q.tail}</button>
-      <button type="button" class="delete-quote-btn" onclick="deleteQuote('${q.id}'); event.stopPropagation();">
-        <span class="icon-x"></span>
-      </button>
-    `;
+      const conceptCell = document.createElement('td');
+      conceptCell.textContent = book.concept || '미지정';
 
-    row.addEventListener('click', () => {
-      selectedQuoteId = q.id;
-      // Highlighting change manually to prevent recreating elements
-      document.querySelectorAll('.quote-item-row').forEach(r => r.classList.remove('selected'));
-      row.classList.add('selected');
+      const characterCell = document.createElement('td');
+      const characterSummary = document.createElement('span');
+      characterSummary.className = 'character-summary';
+      characterSummary.textContent = (book.participatingCharacters || []).join(', ') || '미등록';
+      characterCell.appendChild(characterSummary);
 
-      document.querySelectorAll('.draggable-bubble-group').forEach(b => b.classList.remove('selected'));
-      const activeBubble = canvasBubblesArea.querySelector(`[data-id="${q.id}"]`);
-      if (activeBubble) activeBubble.classList.add('selected');
+      const statusCell = document.createElement('td');
+      const statusButton = document.createElement('button');
+      statusButton.type = 'button';
+      statusButton.className = `status-button${book.status === 'active' ? '' : ' draft'}`;
+      statusButton.textContent = book.status === 'active' ? '공개' : '비공개';
+      statusButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        updateBook({ ...book, status: book.status === 'active' ? 'draft' : 'active' });
+        renderDashboard();
+        showToast('공개 상태를 변경했습니다.');
+      });
+      statusCell.appendChild(statusButton);
 
-      loadSelectedQuoteGradient();
+      const actionCell = document.createElement('td');
+      const actions = document.createElement('div');
+      actions.className = 'row-actions';
+      const editButton = document.createElement('button');
+      editButton.type = 'button';
+      editButton.setAttribute('aria-label', `${book.title} 편집`);
+      editButton.innerHTML = '<img src="assets/figma/admin-pencil.svg" alt="">';
+      editButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        selectBook(book.id);
+      });
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'delete-row';
+      deleteButton.setAttribute('aria-label', `${book.title} 삭제`);
+      deleteButton.innerHTML = '<img src="assets/figma/admin-x.svg" alt="">';
+      deleteButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (!window.confirm(`“${book.title}”을(를) 책장에서 삭제할까요?`)) return;
+        deleteBook(book.id);
+        if (selectedBookId === book.id) {
+          selectedBookId = getBooks()[0]?.id || null;
+          if (selectedBookId) loadBookIntoForm(getBookById(selectedBookId));
+          else resetBookForm();
+        }
+        renderDashboard();
+        showToast('책을 삭제했습니다.');
+      });
+      actions.append(editButton, deleteButton);
+      actionCell.appendChild(actions);
+
+      row.append(bookCell, conceptCell, characterCell, statusCell, actionCell);
+      row.addEventListener('click', () => selectBook(book.id));
+      body.appendChild(row);
     });
 
-    listContainer.appendChild(row);
-  });
-}
+    field('empty-books').hidden = books.length !== 0;
+    field('book-count').textContent = books.length;
+    renderPagination(totalPages);
+  }
 
-// Live update quote text and sync to canvas preview
-window.updateQuoteText = function(quoteId, newText) {
-  const q = tempQuotesList.find(quote => quote.id === quoteId);
-  if (q) {
-    q.text = newText;
-    const bubbleEl = canvasBubblesArea.querySelector(`[data-id="${quoteId}"]`);
-    if (bubbleEl) {
-      const pEl = bubbleEl.querySelector('.quote-bubble p');
-      if (pEl) {
-        pEl.textContent = `“${newText}”`;
-      }
+  function renderPagination(totalPages) {
+    const pagination = field('pagination');
+    pagination.replaceChildren();
+
+    const previous = document.createElement('button');
+    previous.type = 'button';
+    previous.disabled = currentPage === 1;
+    previous.setAttribute('aria-label', '이전 페이지');
+    previous.innerHTML = '<img src="assets/figma/admin-chevron-left.svg" alt="">';
+    previous.addEventListener('click', () => {
+      currentPage -= 1;
+      renderDashboard();
+    });
+    pagination.appendChild(previous);
+
+    for (let page = 1; page <= totalPages; page += 1) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = page;
+      button.classList.toggle('active', page === currentPage);
+      button.addEventListener('click', () => {
+        currentPage = page;
+        renderDashboard();
+      });
+      pagination.appendChild(button);
     }
-  }
-};
 
-// Tail direction cycle (L -> C -> R -> L)
-window.cycleTail = function(quoteId) {
-  const q = tempQuotesList.find(quote => quote.id === quoteId);
-  if (q) {
-    if (q.tail === 'L') q.tail = 'C';
-    else if (q.tail === 'C') q.tail = 'R';
-    else q.tail = 'L';
-    
-    renderCanvasEditor();
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.disabled = currentPage === totalPages;
+    next.setAttribute('aria-label', '다음 페이지');
+    next.innerHTML = '<img src="assets/figma/admin-chevron-right.svg" alt="">';
+    next.addEventListener('click', () => {
+      currentPage += 1;
+      renderDashboard();
+    });
+    pagination.appendChild(next);
   }
-};
 
-window.deleteQuote = function(quoteId) {
-  tempQuotesList = tempQuotesList.filter(q => q.id !== quoteId);
-  if (selectedQuoteId === quoteId) {
-    selectedQuoteId = tempQuotesList.length > 0 ? tempQuotesList[0].id : null;
+  function selectBook(id) {
+    const book = getBookById(id);
+    if (!book) return;
+    selectedBookId = id;
+    bookInspector.classList.remove('closed');
+    loadBookIntoForm(book);
+    renderDashboard();
   }
-  renderCanvasEditor();
-  loadSelectedQuoteGradient();
-};
 
-// Add new quote to temporary list
-document.getElementById('btn-add-quote').addEventListener('click', () => {
-  const input = document.getElementById('new-quote-input');
-  const txt = input.value.trim();
-  if (txt) {
-    const newQ = {
-      id: 'q-temp-' + Date.now(),
-      text: txt,
+  function renderCharacterChips() {
+    const container = field('character-chips');
+    container.replaceChildren();
+    characters.forEach((character, index) => {
+      const chip = document.createElement('span');
+      chip.className = 'character-chip';
+      chip.append(document.createTextNode(character));
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.textContent = '×';
+      removeButton.setAttribute('aria-label', `${character} 삭제`);
+      removeButton.addEventListener('click', () => {
+        characters.splice(index, 1);
+        renderCharacterChips();
+      });
+      chip.appendChild(removeButton);
+      container.appendChild(chip);
+    });
+  }
+
+  function setUploadPreview(id, image) {
+    const preview = field(id);
+    preview.classList.toggle('has-image', Boolean(image));
+    preview.style.backgroundImage = image ? `url("${image}")` : '';
+    const small = preview.querySelector('small');
+    if (small) small.textContent = image ? '이미지 변경' : '이미지 업로드';
+  }
+
+  function loadBookIntoForm(book) {
+    field('book-id').value = book.id;
+    field('book-title').value = book.title || '';
+    field('book-subtitle').value = book.subtitle || '';
+    field('book-concept').value = book.concept || '세계 명작';
+    field('book-contact').value = book.contact || '';
+    field('book-description').value = book.description || '';
+    field('book-spine-color').value = book.spineColor || '#6d4f3d';
+    field('book-spine-color-text').value = (book.spineColor || '#6D4F3D').toUpperCase();
+    field('book-spine-height').value = book.spineHeight || 230;
+    characters = [...(book.participatingCharacters || [])];
+    spineImage = book.spineImage || '';
+    coverImage = book.coverImage || '';
+    detailBgImage = book.detailBgImage || '';
+    renderCharacterChips();
+    setUploadPreview('spine-preview', spineImage);
+    setUploadPreview('cover-preview', coverImage);
+    setUploadPreview('detail-preview', detailBgImage);
+    field('inspector-heading').textContent = '도서 상세 편집';
+  }
+
+  function resetBookForm() {
+    bookForm.reset();
+    field('book-id').value = '';
+    field('book-spine-color').value = '#6d4f3d';
+    field('book-spine-color-text').value = '#6D4F3D';
+    field('book-spine-height').value = getAutomaticSpineHeight(getBooks().length);
+    characters = [];
+    spineImage = '';
+    coverImage = '';
+    detailBgImage = '';
+    renderCharacterChips();
+    setUploadPreview('spine-preview', spineImage);
+    setUploadPreview('cover-preview', coverImage);
+    setUploadPreview('detail-preview', detailBgImage);
+    field('inspector-heading').textContent = '새로운 책 등록';
+  }
+
+  field('character-input').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ',') return;
+    event.preventDefault();
+    const name = event.currentTarget.value.trim().replace(/,$/, '');
+    if (name && !characters.includes(name)) {
+      characters.push(name);
+      renderCharacterChips();
+    }
+    event.currentTarget.value = '';
+  });
+
+  function bindColorPair(colorId, textId, onChange) {
+    const colorInput = field(colorId);
+    const textInput = field(textId);
+    colorInput.addEventListener('input', () => {
+      textInput.value = colorInput.value.toUpperCase();
+      onChange?.();
+    });
+    textInput.addEventListener('change', () => {
+      const value = textInput.value.trim();
+      if (/^#[0-9a-f]{6}$/i.test(value)) {
+        colorInput.value = value;
+        textInput.value = value.toUpperCase();
+        onChange?.();
+      } else {
+        textInput.value = colorInput.value.toUpperCase();
+      }
+    });
+  }
+
+  bindColorPair('book-spine-color', 'book-spine-color-text');
+
+  function bindUpload(inputId, previewId, assign) {
+    field(inputId).addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showToast('이미지 파일만 업로드할 수 있습니다.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        assign(String(reader.result));
+        setUploadPreview(previewId, String(reader.result));
+      });
+      reader.readAsDataURL(file);
+    });
+  }
+
+  bindUpload('spine-upload', 'spine-preview', (value) => { spineImage = value; });
+  bindUpload('cover-upload', 'cover-preview', (value) => { coverImage = value; });
+  bindUpload('detail-upload', 'detail-preview', (value) => { detailBgImage = value; });
+
+  function formBookData(existing) {
+    return {
+      ...(existing || {}),
+      id: field('book-id').value || undefined,
+      title: field('book-title').value.trim(),
+      spineTitle: field('book-title').value.trim(),
+      subtitle: field('book-subtitle').value.trim(),
+      concept: field('book-concept').value,
+      contact: field('book-contact').value.trim(),
+      description: field('book-description').value.trim(),
+      participatingCharacters: characters,
+      spineColor: field('book-spine-color').value,
+      spineHeight: Number(field('book-spine-height').value) || getAutomaticSpineHeight(getBooks().length),
+      status: existing?.status || 'active',
+      spineImage,
+      coverImage,
+      detailBgImage,
+      quotes: existing?.quotes || []
+    };
+  }
+
+  bookForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const id = field('book-id').value;
+    const existing = id ? getBookById(id) : null;
+    const data = formBookData(existing);
+    const saved = existing ? updateBook(data) : addBook(data);
+    selectedBookId = saved.id;
+    loadBookIntoForm(saved);
+    renderDashboard();
+    showToast(existing ? '책 정보를 저장했습니다.' : '새로운 책을 등록했습니다.');
+  });
+
+  field('new-book-button').addEventListener('click', () => {
+    selectedBookId = null;
+    bookInspector.classList.remove('closed');
+    resetBookForm();
+    renderDashboard();
+    field('book-title').focus();
+  });
+  field('cancel-book-button').addEventListener('click', () => {
+    const book = selectedBookId ? getBookById(selectedBookId) : getBooks()[0];
+    if (book) {
+      selectedBookId = book.id;
+      loadBookIntoForm(book);
+      renderDashboard();
+    }
+  });
+  field('inspector-close').addEventListener('click', () => bookInspector.classList.add('closed'));
+  field('book-search').addEventListener('input', () => {
+    currentPage = 1;
+    renderDashboard();
+  });
+  field('status-filter').addEventListener('change', () => {
+    currentPage = 1;
+    renderDashboard();
+  });
+
+  document.querySelectorAll('.sidebar-nav button').forEach((button) => {
+    button.addEventListener('click', () => {
+      const section = button.dataset.section;
+      if (section === 'dashboard' || section === 'books') {
+        document.querySelectorAll('.sidebar-nav button').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        showDashboard();
+      } else {
+        showToast(section === 'guestbook' ? '방명록 보관소는 준비 중입니다.' : '설정 화면은 준비 중입니다.');
+      }
+    });
+  });
+
+  function showDashboard() {
+    detailEditorView.hidden = true;
+    dashboardView.hidden = false;
+    renderDashboard();
+  }
+
+  function openDetailEditor() {
+    const id = field('book-id').value;
+    if (!id) {
+      showToast('책을 먼저 등록한 뒤 상세 화면을 편집해 주세요.');
+      return;
+    }
+    editorBook = getBookById(id);
+    if (!editorBook) return;
+    editorQuotes = cloneQuotes(editorBook.quotes || []);
+    selectedQuoteId = editorQuotes[0]?.id || null;
+    field('detail-editor-book-title').textContent = editorBook.title;
+    field('detail-preview-image').style.backgroundImage = `url("${editorBook.detailBgImage || FIGMA_DETAIL}")`;
+    dashboardView.hidden = true;
+    detailEditorView.hidden = false;
+    renderQuoteEditor();
+    syncGradientControls();
+  }
+
+  function cloneQuotes(quotes) {
+    return JSON.parse(JSON.stringify(quotes));
+  }
+
+  function renderQuoteEditor() {
+    const list = field('quote-list');
+    list.replaceChildren();
+    editorQuotes.forEach((quote) => {
+      const item = document.createElement('div');
+      item.className = `quote-item${quote.id === selectedQuoteId ? ' selected' : ''}`;
+      item.draggable = true;
+      item.dataset.quoteId = quote.id;
+
+      const grip = document.createElement('img');
+      grip.className = 'quote-grip';
+      grip.src = 'assets/figma/admin-grip.svg';
+      grip.alt = '';
+
+      const text = document.createElement('textarea');
+      text.value = quote.text;
+      text.setAttribute('aria-label', '대사 내용');
+      text.addEventListener('focus', () => selectQuote(quote.id));
+      text.addEventListener('input', () => {
+        quote.text = text.value;
+        renderPreviewBubbles();
+      });
+
+      const tails = document.createElement('div');
+      tails.className = 'tail-options';
+      ['L', 'C', 'R'].forEach((tail) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = tail;
+        button.classList.toggle('active', quote.tail === tail);
+        button.setAttribute('aria-label', `말풍선 꼬리 ${tail}`);
+        button.addEventListener('click', () => {
+          quote.tail = tail;
+          selectedQuoteId = quote.id;
+          renderQuoteEditor();
+          syncGradientControls();
+        });
+        tails.appendChild(button);
+      });
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'delete-quote';
+      remove.setAttribute('aria-label', '대사 삭제');
+      remove.innerHTML = '<img src="assets/figma/admin-x.svg" alt="">';
+      remove.addEventListener('click', () => {
+        editorQuotes = editorQuotes.filter((itemQuote) => itemQuote.id !== quote.id);
+        selectedQuoteId = editorQuotes[0]?.id || null;
+        renderQuoteEditor();
+        syncGradientControls();
+      });
+
+      item.addEventListener('click', () => selectQuote(quote.id));
+      item.addEventListener('dragstart', () => {
+        draggedQuoteId = quote.id;
+      });
+      item.addEventListener('dragover', (event) => event.preventDefault());
+      item.addEventListener('drop', (event) => {
+        event.preventDefault();
+        if (!draggedQuoteId || draggedQuoteId === quote.id) return;
+        const fromIndex = editorQuotes.findIndex((entry) => entry.id === draggedQuoteId);
+        const toIndex = editorQuotes.findIndex((entry) => entry.id === quote.id);
+        const [moved] = editorQuotes.splice(fromIndex, 1);
+        editorQuotes.splice(toIndex, 0, moved);
+        draggedQuoteId = null;
+        renderQuoteEditor();
+      });
+
+      item.append(grip, text, tails, remove);
+      list.appendChild(item);
+    });
+    field('quote-count').textContent = `${editorQuotes.length} / 8`;
+    field('add-quote-button').disabled = editorQuotes.length >= 8;
+    renderPreviewBubbles();
+  }
+
+  function selectQuote(id) {
+    if (selectedQuoteId === id) {
+      syncGradientControls();
+      return;
+    }
+    selectedQuoteId = id;
+    document.querySelectorAll('.quote-item').forEach((item) => {
+      item.classList.toggle('selected', item.dataset.quoteId === id);
+    });
+    renderPreviewBubbles();
+    syncGradientControls();
+  }
+
+  function renderPreviewBubbles() {
+    const container = field('detail-preview-bubbles');
+    container.replaceChildren();
+    editorQuotes.forEach((quote) => {
+      const bubble = document.createElement('div');
+      bubble.className = `preview-bubble tail-${quote.tail || 'C'}${quote.id === selectedQuoteId ? ' selected' : ''}`;
+      bubble.textContent = quote.text || '대사를 입력하세요.';
+      const gradient = { ...DEFAULT_GRADIENT, ...(quote.bgGradient || {}) };
+      bubble.style.background =
+        `linear-gradient(${gradient.direction}, ${rgbaFromHex(gradient.color1, gradient.opacity)}, ${rgbaFromHex(gradient.color2, gradient.opacity)})`;
+      bubble.style.left = `${Math.max(0, Math.min(96, (Number(quote.x) / 1200) * 100))}%`;
+      bubble.style.top = `${Math.max(0, Math.min(94, (Number(quote.y) / 750) * 100))}%`;
+      if (quote.id === selectedQuoteId) {
+        ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach((position) => {
+          const handle = document.createElement('i');
+          handle.className = `selection-handle ${position}`;
+          handle.setAttribute('aria-hidden', 'true');
+          bubble.appendChild(handle);
+        });
+      }
+      bubble.addEventListener('pointerdown', (event) => startBubbleDrag(event, quote));
+      bubble.addEventListener('click', () => selectQuote(quote.id));
+      container.appendChild(bubble);
+    });
+  }
+
+  function startBubbleDrag(event, quote) {
+    event.preventDefault();
+    event.stopPropagation();
+    selectedQuoteId = quote.id;
+    syncGradientControls();
+    const canvas = field('detail-preview-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const bubbleRect = event.currentTarget.getBoundingClientRect();
+    const offsetX = event.clientX - bubbleRect.left;
+    const offsetY = event.clientY - bubbleRect.top;
+
+    function move(pointerEvent) {
+      const x = Math.max(0, Math.min(rect.width - bubbleRect.width, pointerEvent.clientX - rect.left - offsetX));
+      const y = Math.max(0, Math.min(rect.height - bubbleRect.height, pointerEvent.clientY - rect.top - offsetY));
+      quote.x = Math.round((x / rect.width) * 1200);
+      quote.y = Math.round((y / rect.height) * 750);
+      quote.positionSpace = 'hero';
+      renderPreviewBubbles();
+    }
+
+    function stop() {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      renderQuoteEditor();
+    }
+
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop, { once: true });
+    renderPreviewBubbles();
+  }
+
+  field('add-quote-button').addEventListener('click', () => {
+    if (editorQuotes.length >= 8) return;
+    const quote = {
+      id: `q-${Date.now()}`,
+      text: '새로운 대사를 입력하세요.',
       tail: 'C',
-      x: 200, // Spawn at center defaults
-      y: 200,
-      bgGradient: {
-        color1: '#E879F9',
-        color2: '#C084FC',
-        direction: '135deg',
-        opacity: 85
-      }
+      x: 620,
+      y: 260 + editorQuotes.length * 48,
+      positionSpace: 'hero',
+      bgGradient: { ...DEFAULT_GRADIENT }
     };
-    tempQuotesList.push(newQ);
-    selectedQuoteId = newQ.id;
-    input.value = '';
-    renderCanvasEditor();
-    loadSelectedQuoteGradient();
-  }
-});
-
-// Render Draggable Quote Bubbles in Canvas
-function renderDraggableBubbles() {
-  canvasBubblesArea.innerHTML = '';
-
-  tempQuotesList.forEach((q) => {
-    const bubble = document.createElement('div');
-    bubble.className = `draggable-bubble-group tail-${q.tail || 'C'} ${q.id === selectedQuoteId ? 'selected' : ''}`;
-    bubble.style.left = `${q.x}px`;
-    bubble.style.top = `${q.y}px`;
-    bubble.setAttribute('data-id', q.id);
-
-    bubble.innerHTML = `
-      <div class="quote-bubble">
-        <p>“${q.text}”</p>
-      </div>
-      <div class="bubble-tail-vector"></div>
-    `;
-
-    // Apply styles to preview bubble body and tail mask from this specific quote's gradient
-    const qGradient = Object.assign({
-      color1: '#E879F9',
-      color2: '#C084FC',
-      direction: '135deg',
-      opacity: 85
-    }, q.bgGradient || {});
-    const qAlpha = (qGradient.opacity / 100).toFixed(2);
-    const qc1 = hexToRgba(qGradient.color1, qAlpha);
-    const qc2 = hexToRgba(qGradient.color2, qAlpha);
-
-    const bubbleDiv = bubble.querySelector('.quote-bubble');
-    bubbleDiv.style.background = `linear-gradient(${qGradient.direction || '135deg'}, ${qc1} 0%, ${qc2} 100%)`;
-    bubble.style.setProperty('--bubble-tail-color', qc2);
-
-    // Mousedown selects the quote immediately!
-    bubble.addEventListener('mousedown', () => {
-      if (selectedQuoteId !== q.id) {
-        selectedQuoteId = q.id;
-
-        // Visual selection list updates
-        document.querySelectorAll('.quote-item-row').forEach(r => r.classList.remove('selected'));
-        const activeRow = document.querySelector(`.quote-item-row[data-quote-id="${q.id}"]`);
-        if (activeRow) activeRow.classList.add('selected');
-
-        // Visual selection canvas updates
-        document.querySelectorAll('.draggable-bubble-group').forEach(b => b.classList.remove('selected'));
-        bubble.classList.add('selected');
-
-        loadSelectedQuoteGradient();
-      }
-    });
-
-    // Attach custom drag events
-    makeElementDraggable(bubble, q);
-
-    canvasBubblesArea.appendChild(bubble);
+    editorQuotes.push(quote);
+    selectedQuoteId = quote.id;
+    renderQuoteEditor();
+    syncGradientControls();
   });
-}
 
-// Vanilla JS drag-and-drop mechanism for canvas preview positioning
-function makeElementDraggable(element, quoteObj) {
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
-  element.addEventListener('mousedown', dragMouseDown);
-
-  function dragMouseDown(e) {
-    e = e || window.event;
-    e.preventDefault();
-    
-    // Get mouse position at startup
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    
-    document.addEventListener('mouseup', closeDragElement);
-    document.addEventListener('mousemove', elementDrag);
-    
-    element.classList.add('dragging');
+  function currentGradient() {
+    return {
+      color1: field('gradient-color-1').value,
+      color2: field('gradient-color-2').value,
+      direction: field('gradient-direction').value,
+      opacity: Number(field('gradient-opacity').value)
+    };
   }
 
-  function elementDrag(e) {
-    e = e || window.event;
-    e.preventDefault();
-    
-    // Calculate new position cursor (compensated for CSS transform scale)
-    pos1 = (pos3 - e.clientX) / canvasScale;
-    pos2 = (pos4 - e.clientY) / canvasScale;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    
-    // Calculate values
-    let newLeft = element.offsetLeft - pos1;
-    let newTop = element.offsetTop - pos2;
-
-    // Boundary constraints check (1920x1080 canvas size)
-    const containerWidth = 1920;
-    const containerHeight = 1080;
-    const elWidth = element.offsetWidth;
-    const elHeight = element.offsetHeight;
-
-    if (newLeft < 0) newLeft = 0;
-    if (newTop < 0) newTop = 0;
-    if (newLeft > containerWidth - elWidth) newLeft = containerWidth - elWidth;
-    if (newTop > containerHeight - elHeight) newTop = containerHeight - elHeight;
-
-    // Apply positioning styles
-    element.style.left = `${newLeft}px`;
-    element.style.top = `${newTop}px`;
-
-    // Save back to temporary object coordinates directly in 1920x1080 space
-    quoteObj.x = Math.round(newLeft);
-    quoteObj.y = Math.round(newTop);
+  function rgbaFromHex(hex, opacity) {
+    const normalized = String(hex || '#000000').replace('#', '').padEnd(6, '0');
+    const red = parseInt(normalized.slice(0, 2), 16);
+    const green = parseInt(normalized.slice(2, 4), 16);
+    const blue = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${Math.max(0, Math.min(1, Number(opacity) / 100))})`;
   }
 
-  function closeDragElement() {
-    // Remove listeners
-    document.removeEventListener('mouseup', closeDragElement);
-    document.removeEventListener('mousemove', elementDrag);
-    element.classList.remove('dragging');
+  function selectedQuote() {
+    return editorQuotes.find((quote) => quote.id === selectedQuoteId) || null;
   }
-}
 
-// Return from Detail Edit to dashboard list
-function exitDetailEditor() {
-  viewDetailEdit.classList.remove('active');
-  viewDashboard.classList.add('active');
-}
+  function syncGradientControls() {
+    const quote = selectedQuote();
+    const gradient = { ...DEFAULT_GRADIENT, ...(quote?.bgGradient || {}) };
+    field('gradient-color-1').value = gradient.color1;
+    field('gradient-color-1-text').value = gradient.color1.toUpperCase();
+    field('gradient-color-2').value = gradient.color2;
+    field('gradient-color-2-text').value = gradient.color2.toUpperCase();
+    field('gradient-direction').value = gradient.direction;
+    field('gradient-opacity').value = gradient.opacity;
+    updateGradientPreview();
+  }
 
-document.getElementById('btn-back-to-list').addEventListener('click', exitDetailEditor);
-document.getElementById('btn-cancel-detail').addEventListener('click', exitDetailEditor);
+  function updateGradientPreview() {
+    const gradient = currentGradient();
+    const css = `linear-gradient(${gradient.direction}, ${gradient.color1}, ${gradient.color2})`;
+    field('gradient-preview').style.background = css;
+    field('gradient-opacity-value').textContent = `${gradient.opacity}%`;
+  }
 
-// Save Detail Edit coordinates & config
-document.getElementById('btn-save-detail').addEventListener('click', () => {
-  if (!currentEditingBook) return;
+  function updateSelectedQuoteGradient() {
+    const quote = selectedQuote();
+    if (!quote) return;
+    quote.bgGradient = currentGradient();
+    updateGradientPreview();
+    renderPreviewBubbles();
+  }
 
-  // Save quotes list
-  currentEditingBook.quotes = tempQuotesList;
+  bindColorPair('gradient-color-1', 'gradient-color-1-text', updateSelectedQuoteGradient);
+  bindColorPair('gradient-color-2', 'gradient-color-2-text', updateSelectedQuoteGradient);
+  field('gradient-direction').addEventListener('change', updateSelectedQuoteGradient);
+  field('gradient-opacity').addEventListener('input', updateSelectedQuoteGradient);
 
-  updateBook(currentEditingBook);
-  alert('상세페이지 편집 사양이 저장되었습니다.');
-  exitDetailEditor();
-  renderBooksTable();
-});
+  function saveDetail() {
+    if (!editorBook) return;
+    const saved = updateBook({
+      ...editorBook,
+      quotes: cloneQuotes(editorQuotes)
+    });
+    editorBook = saved;
+    selectedBookId = saved.id;
+    showToast('상세 화면 설정을 저장했습니다.');
+    showDashboard();
+    loadBookIntoForm(saved);
+  }
 
-// -------------------------------------------------------------
-// 5. INITIAL LOAD
-// -------------------------------------------------------------
-window.addEventListener('load', () => {
-  checkAuth();
+  field('open-detail-editor').addEventListener('click', openDetailEditor);
+  field('detail-editor-back').addEventListener('click', showDashboard);
+  field('cancel-detail-button').addEventListener('click', showDashboard);
+  field('save-detail-button').addEventListener('click', saveDetail);
+  field('save-detail-bottom-button').addEventListener('click', saveDetail);
+
+  subscribeBooks(() => {
+    if (adminShell.hidden) return;
+    const selected = selectedBookId ? getBookById(selectedBookId) : null;
+    if (selected) {
+      loadBookIntoForm(selected);
+    } else {
+      const firstBook = getBooks()[0] || null;
+      selectedBookId = firstBook?.id || null;
+      if (firstBook) loadBookIntoForm(firstBook);
+      else resetBookForm();
+    }
+    renderDashboard();
+  });
+
+  if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+    openSession();
+  } else {
+    closeSession();
+  }
 });
