@@ -1,10 +1,12 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await initializeSurangData({ allowLocalSeed: true });
   const SESSION_KEY = 'surang_admin_session_v2';
   const PAGE_SIZE = 5;
   const loginView = document.getElementById('login-view');
   const adminShell = document.getElementById('admin-shell');
   const dashboardView = document.getElementById('dashboard-view');
   const detailEditorView = document.getElementById('detail-editor-view');
+  const settingsView = document.getElementById('settings-view');
   const bookInspector = document.getElementById('book-inspector');
   const bookForm = document.getElementById('book-form');
   const toast = document.getElementById('admin-toast');
@@ -20,6 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedQuoteId = null;
   let toastTimer = null;
   let draggedQuoteId = null;
+  let pendingBgmFile = null;
+  let bgmPreviewUrl = '';
+  let detailPreviewImageSize = { width: BUBBLE_REFERENCE_WIDTH, height: BUBBLE_REFERENCE_HEIGHT };
+  let detailPreviewImageLoadToken = 0;
 
   const field = (id) => document.getElementById(id);
 
@@ -30,6 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
   }
 
+  window.addEventListener('surang:data-sync-error', () => {
+    showToast('서버 저장에 실패했습니다. 실행 중인 데이터 서버를 확인해 주세요.');
+  });
+
   function openSession() {
     sessionStorage.setItem(SESSION_KEY, 'true');
     loginView.hidden = true;
@@ -39,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderDashboard();
     if (firstBook) loadBookIntoForm(firstBook);
     else resetBookForm();
+    refreshBgmSettings();
   }
 
   function closeSession() {
@@ -255,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadBookIntoForm(book) {
     field('book-id').value = book.id;
     field('book-title').value = book.title || '';
+    field('book-spine-title').value = book.spineTitle || book.title || '';
     field('book-subtitle').value = book.subtitle || '';
     field('book-concept').value = book.concept || '세계 명작';
     field('book-contact').value = book.contact || '';
@@ -348,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ...(existing || {}),
       id: field('book-id').value || undefined,
       title: field('book-title').value.trim(),
-      spineTitle: field('book-title').value.trim(),
+      spineTitle: field('book-spine-title').value.trim() || field('book-title').value.trim(),
       subtitle: field('book-subtitle').value.trim(),
       concept: field('book-concept').value,
       contact: field('book-contact').value.trim(),
@@ -408,16 +420,28 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.sidebar-nav button').forEach((item) => item.classList.remove('active'));
         button.classList.add('active');
         showDashboard();
+      } else if (section === 'settings') {
+        document.querySelectorAll('.sidebar-nav button').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        showSettings();
       } else {
-        showToast(section === 'guestbook' ? '방명록 보관소는 준비 중입니다.' : '설정 화면은 준비 중입니다.');
+        showToast('방명록 보관소는 준비 중입니다.');
       }
     });
   });
 
   function showDashboard() {
     detailEditorView.hidden = true;
+    settingsView.hidden = true;
     dashboardView.hidden = false;
     renderDashboard();
+  }
+
+  function showSettings() {
+    dashboardView.hidden = true;
+    detailEditorView.hidden = true;
+    settingsView.hidden = false;
+    refreshBgmSettings();
   }
 
   function openDetailEditor() {
@@ -431,11 +455,25 @@ document.addEventListener('DOMContentLoaded', () => {
     editorQuotes = cloneQuotes(editorBook.quotes || []);
     selectedQuoteId = editorQuotes[0]?.id || null;
     field('detail-editor-book-title').textContent = editorBook.title;
-    field('detail-preview-image').style.backgroundImage = `url("${editorBook.detailBgImage || FIGMA_DETAIL}")`;
+    const detailImageSource = editorBook.detailBgImage || FIGMA_DETAIL;
+    field('detail-preview-image').style.backgroundImage = `url("${detailImageSource}")`;
+    detailPreviewImageSize = { width: BUBBLE_REFERENCE_WIDTH, height: BUBBLE_REFERENCE_HEIGHT };
+    const imageLoadToken = ++detailPreviewImageLoadToken;
+    const previewImage = new Image();
+    previewImage.addEventListener('load', () => {
+      if (imageLoadToken !== detailPreviewImageLoadToken) return;
+      detailPreviewImageSize = {
+        width: previewImage.naturalWidth || BUBBLE_REFERENCE_WIDTH,
+        height: previewImage.naturalHeight || BUBBLE_REFERENCE_HEIGHT
+      };
+      renderPreviewBubbles();
+    });
+    previewImage.src = detailImageSource;
     dashboardView.hidden = true;
+    settingsView.hidden = true;
     detailEditorView.hidden = false;
     renderQuoteEditor();
-    syncGradientControls();
+    syncBubbleStyleControls();
   }
 
   function cloneQuotes(quotes) {
@@ -477,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
           quote.tail = tail;
           selectedQuoteId = quote.id;
           renderQuoteEditor();
-          syncGradientControls();
+          syncBubbleStyleControls();
         });
         tails.appendChild(button);
       });
@@ -491,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editorQuotes = editorQuotes.filter((itemQuote) => itemQuote.id !== quote.id);
         selectedQuoteId = editorQuotes[0]?.id || null;
         renderQuoteEditor();
-        syncGradientControls();
+        syncBubbleStyleControls();
       });
 
       item.addEventListener('click', () => selectQuote(quote.id));
@@ -520,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function selectQuote(id) {
     if (selectedQuoteId === id) {
-      syncGradientControls();
+      syncBubbleStyleControls();
       return;
     }
     selectedQuoteId = id;
@@ -528,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
       item.classList.toggle('selected', item.dataset.quoteId === id);
     });
     renderPreviewBubbles();
-    syncGradientControls();
+    syncBubbleStyleControls();
   }
 
   function renderPreviewBubbles() {
@@ -537,12 +575,13 @@ document.addEventListener('DOMContentLoaded', () => {
     editorQuotes.forEach((quote) => {
       const bubble = document.createElement('div');
       bubble.className = `preview-bubble tail-${quote.tail || 'C'}${quote.id === selectedQuoteId ? ' selected' : ''}`;
+      bubble.dataset.quoteId = quote.id;
       bubble.textContent = quote.text || '대사를 입력하세요.';
-      const gradient = { ...DEFAULT_GRADIENT, ...(quote.bgGradient || {}) };
-      bubble.style.background =
-        `linear-gradient(${gradient.direction}, ${rgbaFromHex(gradient.color1, gradient.opacity)}, ${rgbaFromHex(gradient.color2, gradient.opacity)})`;
-      bubble.style.left = `${Math.max(0, Math.min(96, (Number(quote.x) / 1200) * 100))}%`;
-      bubble.style.top = `${Math.max(0, Math.min(94, (Number(quote.y) / 750) * 100))}%`;
+      const bubbleColor = quote.bubbleColor || DEFAULT_BUBBLE_STYLE.color;
+      const bubbleOpacity = Number(quote.bubbleOpacity ?? DEFAULT_BUBBLE_STYLE.opacity);
+      const bubbleBackground = rgbaFromHex(bubbleColor, bubbleOpacity);
+      bubble.style.setProperty('--bubble-background', bubbleBackground);
+      bubble.style.setProperty('--bubble-tail-background', bubbleBackground);
       if (quote.id === selectedQuoteId) {
         ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach((position) => {
           const handle = document.createElement('i');
@@ -555,13 +594,32 @@ document.addEventListener('DOMContentLoaded', () => {
       bubble.addEventListener('click', () => selectQuote(quote.id));
       container.appendChild(bubble);
     });
+    requestAnimationFrame(() => {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      editorQuotes.forEach((quote) => {
+        const bubble = container.querySelector(`[data-quote-id="${CSS.escape(quote.id)}"]`);
+        if (!bubble) return;
+        const projectedPoint = projectBubblePointToFrame(
+          Number(quote.x),
+          Number(quote.y),
+          quote.positionSpace,
+          detailPreviewImageSize.width,
+          detailPreviewImageSize.height,
+          width,
+          height
+        );
+        bubble.style.left = `${Math.max(2, Math.min(width - bubble.offsetWidth - 2, projectedPoint.left))}px`;
+        bubble.style.top = `${Math.max(2, Math.min(height - bubble.offsetHeight - 5, projectedPoint.top))}px`;
+      });
+    });
   }
 
   function startBubbleDrag(event, quote) {
     event.preventDefault();
     event.stopPropagation();
     selectedQuoteId = quote.id;
-    syncGradientControls();
+    syncBubbleStyleControls();
     const canvas = field('detail-preview-canvas');
     const rect = canvas.getBoundingClientRect();
     const bubbleRect = event.currentTarget.getBoundingClientRect();
@@ -571,9 +629,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function move(pointerEvent) {
       const x = Math.max(0, Math.min(rect.width - bubbleRect.width, pointerEvent.clientX - rect.left - offsetX));
       const y = Math.max(0, Math.min(rect.height - bubbleRect.height, pointerEvent.clientY - rect.top - offsetY));
-      quote.x = Math.round((x / rect.width) * 1200);
-      quote.y = Math.round((y / rect.height) * 750);
-      quote.positionSpace = 'hero';
+      const referencePoint = framePointToBubbleReference(
+        x,
+        y,
+        detailPreviewImageSize.width,
+        detailPreviewImageSize.height,
+        rect.width,
+        rect.height
+      );
+      quote.x = Math.round(Math.max(0, Math.min(BUBBLE_REFERENCE_WIDTH, referencePoint.x)));
+      quote.y = Math.round(Math.max(0, Math.min(BUBBLE_REFERENCE_HEIGHT, referencePoint.y)));
+      quote.positionSpace = BUBBLE_POSITION_SPACE;
       renderPreviewBubbles();
     }
 
@@ -594,23 +660,22 @@ document.addEventListener('DOMContentLoaded', () => {
       id: `q-${Date.now()}`,
       text: '새로운 대사를 입력하세요.',
       tail: 'C',
-      x: 620,
-      y: 260 + editorQuotes.length * 48,
-      positionSpace: 'hero',
-      bgGradient: { ...DEFAULT_GRADIENT }
+      x: 827,
+      y: 300 + editorQuotes.length * 64,
+      positionSpace: BUBBLE_POSITION_SPACE,
+      bubbleColor: DEFAULT_BUBBLE_STYLE.color,
+      bubbleOpacity: DEFAULT_BUBBLE_STYLE.opacity
     };
     editorQuotes.push(quote);
     selectedQuoteId = quote.id;
     renderQuoteEditor();
-    syncGradientControls();
+    syncBubbleStyleControls();
   });
 
-  function currentGradient() {
+  function currentBubbleStyle() {
     return {
-      color1: field('gradient-color-1').value,
-      color2: field('gradient-color-2').value,
-      direction: field('gradient-direction').value,
-      opacity: Number(field('gradient-opacity').value)
+      color: field('bubble-color').value,
+      opacity: Number(field('bubble-opacity').value)
     };
   }
 
@@ -626,37 +691,34 @@ document.addEventListener('DOMContentLoaded', () => {
     return editorQuotes.find((quote) => quote.id === selectedQuoteId) || null;
   }
 
-  function syncGradientControls() {
+  function syncBubbleStyleControls() {
     const quote = selectedQuote();
-    const gradient = { ...DEFAULT_GRADIENT, ...(quote?.bgGradient || {}) };
-    field('gradient-color-1').value = gradient.color1;
-    field('gradient-color-1-text').value = gradient.color1.toUpperCase();
-    field('gradient-color-2').value = gradient.color2;
-    field('gradient-color-2-text').value = gradient.color2.toUpperCase();
-    field('gradient-direction').value = gradient.direction;
-    field('gradient-opacity').value = gradient.opacity;
-    updateGradientPreview();
+    const color = quote?.bubbleColor || DEFAULT_BUBBLE_STYLE.color;
+    const opacity = Number(quote?.bubbleOpacity ?? DEFAULT_BUBBLE_STYLE.opacity);
+    field('bubble-color').value = color;
+    field('bubble-color-text').value = color.toUpperCase();
+    field('bubble-opacity').value = opacity;
+    updateBubbleStylePreview();
   }
 
-  function updateGradientPreview() {
-    const gradient = currentGradient();
-    const css = `linear-gradient(${gradient.direction}, ${gradient.color1}, ${gradient.color2})`;
-    field('gradient-preview').style.background = css;
-    field('gradient-opacity-value').textContent = `${gradient.opacity}%`;
+  function updateBubbleStylePreview() {
+    const style = currentBubbleStyle();
+    field('bubble-color-preview').style.background = rgbaFromHex(style.color, style.opacity);
+    field('bubble-opacity-value').textContent = `${style.opacity}%`;
   }
 
-  function updateSelectedQuoteGradient() {
+  function updateSelectedQuoteStyle() {
     const quote = selectedQuote();
     if (!quote) return;
-    quote.bgGradient = currentGradient();
-    updateGradientPreview();
+    const style = currentBubbleStyle();
+    quote.bubbleColor = style.color.toUpperCase();
+    quote.bubbleOpacity = style.opacity;
+    updateBubbleStylePreview();
     renderPreviewBubbles();
   }
 
-  bindColorPair('gradient-color-1', 'gradient-color-1-text', updateSelectedQuoteGradient);
-  bindColorPair('gradient-color-2', 'gradient-color-2-text', updateSelectedQuoteGradient);
-  field('gradient-direction').addEventListener('change', updateSelectedQuoteGradient);
-  field('gradient-opacity').addEventListener('input', updateSelectedQuoteGradient);
+  bindColorPair('bubble-color', 'bubble-color-text', updateSelectedQuoteStyle);
+  field('bubble-opacity').addEventListener('input', updateSelectedQuoteStyle);
 
   function saveDetail() {
     if (!editorBook) return;
@@ -676,6 +738,82 @@ document.addEventListener('DOMContentLoaded', () => {
   field('cancel-detail-button').addEventListener('click', showDashboard);
   field('save-detail-button').addEventListener('click', saveDetail);
   field('save-detail-bottom-button').addEventListener('click', saveDetail);
+
+  function setBgmPreview(blob, name) {
+    if (bgmPreviewUrl) URL.revokeObjectURL(bgmPreviewUrl);
+    bgmPreviewUrl = '';
+    const preview = field('bgm-admin-preview');
+    if (!blob) {
+      preview.pause();
+      preview.removeAttribute('src');
+      preview.load();
+      field('bgm-file-name').textContent = '등록된 음악이 없습니다.';
+      field('remove-bgm-button').disabled = true;
+      return;
+    }
+    bgmPreviewUrl = URL.createObjectURL(blob);
+    preview.src = bgmPreviewUrl;
+    preview.load();
+    field('bgm-file-name').textContent = name || 'homepage-bgm.mp3';
+    field('remove-bgm-button').disabled = false;
+  }
+
+  async function refreshBgmSettings() {
+    try {
+      const bgm = await getHomepageBgm();
+      if (!pendingBgmFile) setBgmPreview(bgm.blob, bgm.bgmName);
+    } catch (error) {
+      console.warn('BGM 설정을 불러오지 못했습니다.', error);
+      showToast('BGM 설정을 불러오지 못했습니다.');
+    }
+  }
+
+  field('bgm-upload').addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'audio/mpeg' && !file.name.toLowerCase().endsWith('.mp3')) {
+      event.target.value = '';
+      showToast('MP3 파일만 등록할 수 있습니다.');
+      return;
+    }
+    pendingBgmFile = file;
+    setBgmPreview(file, file.name);
+  });
+
+  field('save-bgm-button').addEventListener('click', async () => {
+    if (!pendingBgmFile) {
+      showToast('저장할 MP3 파일을 먼저 선택해 주세요.');
+      return;
+    }
+    const button = field('save-bgm-button');
+    button.disabled = true;
+    try {
+      await saveHomepageBgm(pendingBgmFile);
+      pendingBgmFile = null;
+      field('bgm-upload').value = '';
+      await refreshBgmSettings();
+      showToast('홈페이지 BGM을 저장했습니다.');
+    } catch (error) {
+      console.error('BGM 저장 실패', error);
+      showToast('BGM을 저장하지 못했습니다. 파일 크기와 브라우저 저장 권한을 확인해 주세요.');
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  field('remove-bgm-button').addEventListener('click', async () => {
+    if (!window.confirm('등록된 홈페이지 BGM을 삭제할까요?')) return;
+    try {
+      await deleteHomepageBgm();
+      pendingBgmFile = null;
+      field('bgm-upload').value = '';
+      setBgmPreview(null, '');
+      showToast('홈페이지 BGM을 삭제했습니다.');
+    } catch (error) {
+      console.error('BGM 삭제 실패', error);
+      showToast('BGM을 삭제하지 못했습니다.');
+    }
+  });
 
   subscribeBooks(() => {
     if (adminShell.hidden) return;

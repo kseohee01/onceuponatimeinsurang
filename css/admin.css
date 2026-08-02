@@ -1131,7 +1131,7 @@ tr.selected .row-actions {
   width: 100%;
   height: auto;
   max-height: calc(100vh - 170px);
-  aspect-ratio: 8 / 5;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid #d9cdc0;
   border-radius: 12px;
@@ -1144,7 +1144,7 @@ tr.selected .row-actions {
   top: 50%;
   left: 0;
   width: 100%;
-  aspect-ratio: 8 / 5;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   transform: translateY(-50%);
   background: #2d211a;
@@ -1167,19 +1167,21 @@ tr.selected .row-actions {
 .preview-bubble {
   position: absolute;
   display: flex;
-  max-width: 14.76cqw;
-  min-height: 1.934cqw;
+  width: max-content;
+  max-width: 16.56cqw;
+  min-height: 2.17cqw;
   align-items: center;
-  padding: 0.407cqw 0.814cqw;
-  border: 0.051cqw solid rgba(255, 255, 255, 0.12);
-  border-radius: 1.018cqw;
-  background: linear-gradient(135deg, rgba(45, 212, 191, 0.9), rgba(15, 118, 110, 0.9));
-  box-shadow: 0 0.204cqw 0.662cqw rgba(0, 0, 0, 0.25);
+  padding: 0.457cqw 0.913cqw;
+  border: 0.057cqw solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.142cqw;
+  background: var(--bubble-background, rgba(45, 212, 191, 0.9));
+  box-shadow: 0 0.229cqw 0.743cqw rgba(0, 0, 0, 0.25);
   color: rgba(255, 255, 255, 0.9);
   cursor: grab;
-  font: 0.713cqw/1.5 "Gowun Dodum", sans-serif;
+  font: 0.8cqw/1.5 "Gowun Dodum", sans-serif;
   user-select: none;
-  backdrop-filter: blur(0.122cqw);
+  backdrop-filter: blur(0.137cqw);
+  isolation: isolate;
 }
 
 .preview-bubble:active {
@@ -1223,17 +1225,17 @@ tr.selected .row-actions {
 
 .preview-bubble::after {
   position: absolute;
-  bottom: -0.407cqw;
-  width: 0.814cqw;
-  height: 0.56cqw;
+  z-index: 0;
+  bottom: -0.651cqw;
+  width: 1.144cqw;
+  height: 0.696cqw;
   content: "";
-  background: url("../assets/figma/bubble-tail-c.svg") center / contain no-repeat;
-  opacity: 0.62;
+  background: var(--bubble-tail-background, rgba(45, 212, 191, 0.9));
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 .preview-bubble.tail-L::after {
-  left: 1.12cqw;
-  background-image: url("../assets/figma/bubble-tail-l.svg");
+  left: 1.256cqw;
 }
 
 .preview-bubble.tail-C::after {
@@ -1242,8 +1244,7 @@ tr.selected .row-actions {
 }
 
 .preview-bubble.tail-R::after {
-  right: 1.12cqw;
-  background-image: url("../assets/figma/bubble-tail-r.svg");
+  right: 1.256cqw;
 }
 
 .preview-help {
@@ -1385,36 +1386,194 @@ tr.selected .row-actions {
   width: 13px;
 }
 
-.gradient-editor {
+.bubble-style-editor {
   margin-top: 17px;
   padding-top: 16px;
   border-top: 1px solid #e9e0d7;
 }
 
-.gradient-editor h3 {
+.bubble-style-editor h3 {
   margin: 0 0 10px;
   color: #5d4c41;
   font: 700 11px/1.4 "Nanum Myeongjo", serif;
 }
 
-.gradient-preview {
+.bubble-color-preview {
   height: 42px;
   margin-bottom: 11px;
   border: 1px solid #d9cfc5;
   border-radius: 7px;
 }
 
-.gradient-editor .form-field {
+.bubble-style-editor .form-field {
   margin-bottom: 10px;
 }
 
-.gradient-editor input[type="range"] {
+.bubble-style-editor input[type="range"] {
   width: 100%;
   accent-color: #73523d;
 }
 
 .detail-actions {
   margin-top: 6px;
+}
+
+.settings-view {
+  overflow-y: auto;
+}
+
+.bgm-settings-card {
+  width: min(760px, 100%);
+  margin-top: 22px;
+  padding: 34px;
+  border: 1px solid var(--admin-line);
+  border-radius: 16px;
+  background: var(--admin-paper);
+  box-shadow: 0 12px 34px rgba(76, 51, 38, 0.08);
+}
+
+.bgm-settings-copy {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.settings-kicker {
+  margin: 0 0 7px;
+  color: var(--admin-gold);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.bgm-settings-copy h2 {
+  margin: 0 0 9px;
+  color: var(--admin-ink);
+  font: 700 22px/1.35 "Nanum Myeongjo", serif;
+}
+
+.bgm-settings-copy > p:last-child {
+  max-width: 600px;
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.bgm-upload-field {
+  display: block;
+  margin-top: 24px;
+}
+
+.bgm-upload-field > span:first-child {
+  display: block;
+  margin-bottom: 9px;
+  color: #62534a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.bgm-upload-field > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.bgm-upload-surface {
+  display: flex;
+  min-height: 92px;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border: 1px dashed #cdbba9;
+  border-radius: 12px;
+  background: #faf6f1;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+.bgm-upload-surface:hover {
+  border-color: #a9825f;
+  background: #fffaf5;
+}
+
+.bgm-disc {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border: 7px solid #4a3328;
+  border-radius: 50%;
+  background: #bd9466;
+  box-shadow: inset 0 0 0 9px #2f211a;
+}
+
+.bgm-disc::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #f7ead9;
+  content: "";
+}
+
+.bgm-upload-surface > span:nth-child(2) {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bgm-upload-surface strong {
+  overflow: hidden;
+  color: #4f4037;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bgm-upload-surface small {
+  color: #96877e;
+  font-size: 10px;
+}
+
+.bgm-upload-cta {
+  padding: 9px 13px;
+  border: 1px solid #d6c7b8;
+  border-radius: 7px;
+  background: #fff;
+  color: #705846;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.bgm-admin-preview {
+  display: block;
+  width: 100%;
+  height: 42px;
+  margin-top: 18px;
+}
+
+.bgm-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 22px;
+}
+
+.danger-button {
+  color: #a54b3d;
+}
+
+.danger-button:disabled,
+.bgm-settings-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .admin-toast {

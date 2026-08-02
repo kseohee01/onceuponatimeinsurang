@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/admin.css?v=4">
+  <link rel="stylesheet" href="css/admin.css?v=9">
 </head>
 <body>
   <div id="admin-toast" class="admin-toast" role="status" aria-live="polite"></div>
@@ -150,13 +150,19 @@
 
           <form id="book-form" class="book-form">
             <input id="book-id" type="hidden">
+            <div class="two-fields">
+              <label class="form-field">
+                <span>책 제목</span>
+                <input id="book-title" type="text" placeholder="책 제목을 입력하세요" required>
+              </label>
+              <label class="form-field">
+                <span>책등 제목</span>
+                <input id="book-spine-title" type="text" placeholder="책장에 표시할 제목">
+              </label>
+            </div>
             <label class="form-field">
-              <span>책 제목</span>
-              <input id="book-title" type="text" placeholder="책 제목을 입력하세요" required>
-            </label>
-            <label class="form-field">
-              <span>영문 제목</span>
-              <input id="book-subtitle" type="text" placeholder="English title">
+              <span>부제 <small>(북 팝업 · 상세 페이지 공통)</small></span>
+              <input id="book-subtitle" type="text" placeholder="예: The Secret Garden">
             </label>
             <label class="form-field">
               <span>참여 캐릭터</span>
@@ -275,38 +281,20 @@
             대사 추가
           </button>
 
-          <div class="gradient-editor">
-            <h3>말풍선 그라데이션</h3>
-            <div class="gradient-preview" id="gradient-preview"></div>
+          <div class="bubble-style-editor">
+            <h3>말풍선 색상</h3>
+            <div class="bubble-color-preview" id="bubble-color-preview"></div>
             <div class="two-fields">
               <label class="form-field">
-                <span>시작 색상</span>
+                <span>컬러</span>
                 <span class="color-field">
-                  <input id="gradient-color-1" type="color" value="#664d3f">
-                  <input id="gradient-color-1-text" type="text" value="#664D3F">
+                  <input id="bubble-color" type="color" value="#2dd4bf">
+                  <input id="bubble-color-text" type="text" value="#2DD4BF">
                 </span>
               </label>
               <label class="form-field">
-                <span>끝 색상</span>
-                <span class="color-field">
-                  <input id="gradient-color-2" type="color" value="#1b100a">
-                  <input id="gradient-color-2-text" type="text" value="#1B100A">
-                </span>
-              </label>
-            </div>
-            <div class="two-fields">
-              <label class="form-field">
-                <span>방향</span>
-                <select id="gradient-direction">
-                  <option value="90deg">위에서 아래</option>
-                  <option value="135deg">왼쪽 위에서 오른쪽 아래</option>
-                  <option value="180deg">왼쪽에서 오른쪽</option>
-                  <option value="45deg">왼쪽 아래에서 오른쪽 위</option>
-                </select>
-              </label>
-              <label class="form-field">
-                <span>시작 불투명도 <b id="gradient-opacity-value">90%</b></span>
-                <input id="gradient-opacity" type="range" min="0" max="100" value="90">
+                <span>불투명도 <b id="bubble-opacity-value">90%</b></span>
+                <input id="bubble-opacity" type="range" min="0" max="100" value="90">
               </label>
             </div>
           </div>
@@ -317,9 +305,47 @@
         </aside>
       </div>
     </main>
+
+    <main id="settings-view" class="admin-main settings-view" hidden>
+      <header class="admin-page-header">
+        <div>
+          <p class="page-kicker">HOMEPAGE AUDIO</p>
+          <h1>홈페이지 BGM 설정</h1>
+          <p>공개 페이지 헤더에서 반복 재생할 MP3 파일을 관리하세요.</p>
+        </div>
+      </header>
+
+      <section class="bgm-settings-card" aria-labelledby="bgm-settings-title">
+        <div class="bgm-settings-copy">
+          <p class="settings-kicker">BACKGROUND MUSIC</p>
+          <h2 id="bgm-settings-title">홈페이지 배경음악</h2>
+          <p>등록한 음악은 홈페이지 진입 시 자동 재생을 시도하며, 브라우저 정책으로 차단되면 첫 사용자 입력 후 재생됩니다.</p>
+        </div>
+
+        <label class="bgm-upload-field">
+          <span>MP3 파일</span>
+          <input id="bgm-upload" type="file" accept="audio/mpeg,.mp3">
+          <span class="bgm-upload-surface">
+            <span class="bgm-disc" aria-hidden="true"></span>
+            <span>
+              <strong id="bgm-file-name">등록된 음악이 없습니다.</strong>
+              <small>MP3 파일을 선택해 주세요.</small>
+            </span>
+            <span class="bgm-upload-cta">파일 선택</span>
+          </span>
+        </label>
+
+        <audio id="bgm-admin-preview" class="bgm-admin-preview" controls loop></audio>
+
+        <div class="bgm-settings-actions">
+          <button id="remove-bgm-button" class="secondary-button danger-button" type="button">등록 음악 삭제</button>
+          <button id="save-bgm-button" class="primary-button" type="button">BGM 저장</button>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <script src="js/db.js"></script>
-  <script src="js/admin.js"></script>
+  <script src="js/db.js?v=4"></script>
+  <script src="js/admin.js?v=7"></script>
 </body>
 </html>

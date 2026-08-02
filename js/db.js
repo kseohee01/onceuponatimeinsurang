@@ -1,12 +1,26 @@
-const STORAGE_KEY = 'surang_books_db_v5';
-const LEGACY_STORAGE_KEYS = ['surang_books_db_v4', 'surang_books_db_v3'];
+const STORAGE_KEY = 'surang_books_db_v6';
+const LEGACY_STORAGE_KEYS = ['surang_books_db_v5', 'surang_books_db_v4', 'surang_books_db_v3'];
+const SITE_SETTINGS_KEY = 'surang_site_settings_v1';
+const SITE_ASSET_DB_NAME = 'surang_site_assets_v1';
+const SITE_ASSET_STORE = 'assets';
+const HOMEPAGE_BGM_ASSET_KEY = 'homepage-bgm';
+const SERVER_STATE_ENDPOINT = '/api/state';
+const SERVER_INITIALIZE_ENDPOINT = '/api/initialize';
+const SERVER_BOOKS_ENDPOINT = '/api/books';
+const SERVER_BGM_ENDPOINT = '/api/bgm';
+const BOOKS_UPDATED_EVENT = 'surang:books-updated';
+const SERVER_POLL_INTERVAL = 1500;
 const FIGMA_COVER = 'assets/figma/popup-cover-art.png';
 const FIGMA_DETAIL = 'assets/figma/detail-hero.png';
+const BUBBLE_REFERENCE_WIDTH = 1600;
+const BUBBLE_REFERENCE_HEIGHT = 900;
+const BUBBLE_POSITION_SPACE = 'hero-16x9';
+const LEGACY_BUBBLE_REFERENCE_WIDTH = 1200;
+const LEGACY_BUBBLE_REFERENCE_HEIGHT = 750;
+const LEGACY_BUBBLE_POSITION_SPACE = 'hero-8x5';
 
-const DEFAULT_GRADIENT = {
-  color1: '#2DD4BF',
-  color2: '#0F766E',
-  direction: '135deg',
+const DEFAULT_BUBBLE_STYLE = {
+  color: '#2DD4BF',
   opacity: 90
 };
 
@@ -42,6 +56,21 @@ const FIGMA_EXAMPLE_QUOTES = [
   '그러니 비밀의 문을 열어 봐.'
 ];
 
+const LEGACY_TEMP_BOOK_TITLES = new Map([
+  ['book-1', '비밀의 화원 : 만개하는 감성'],
+  ['book-2', '은하철도의 밤 : 우주 기차여행'],
+  ['book-3', '빨간 머리 앤 : 초록지붕 이야기'],
+  ['book-4', '피터팬 : 네버랜드의 꿈'],
+  ['book-5', '달빛 아래 : 깊은 밤 하늘빛']
+]);
+
+let serverAvailable = false;
+let serverInitialized = false;
+let serverStateUpdatedAt = 0;
+let serverBgm = null;
+let serverPollTimer = null;
+let remoteWriteQueue = Promise.resolve();
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -50,39 +79,94 @@ function cleanText(value, fallback = '') {
   return typeof value === 'string' && !value.includes('�') ? value.trim() : fallback;
 }
 
-function normalizeGradient(gradient) {
-  const source = gradient && typeof gradient === 'object' ? gradient : {};
+function normalizeBubbleStyle(quote) {
+  const source = quote && typeof quote === 'object' ? quote : {};
+  const legacyGradient = source.bgGradient && typeof source.bgGradient === 'object'
+    ? source.bgGradient
+    : {};
+  const color = source.bubbleColor || legacyGradient.color1;
+  const opacity = source.bubbleOpacity ?? legacyGradient.opacity;
   return {
-    color1: /^#[0-9a-f]{6}$/i.test(source.color1 || '') ? source.color1.toUpperCase() : DEFAULT_GRADIENT.color1,
-    color2: /^#[0-9a-f]{6}$/i.test(source.color2 || '') ? source.color2.toUpperCase() : DEFAULT_GRADIENT.color2,
-    direction: ['45deg', '90deg', '135deg', '180deg'].includes(source.direction)
-      ? source.direction
-      : DEFAULT_GRADIENT.direction,
-    opacity: Math.max(0, Math.min(100, Number(source.opacity ?? DEFAULT_GRADIENT.opacity)))
+    color: /^#[0-9a-f]{6}$/i.test(color || '') ? color.toUpperCase() : DEFAULT_BUBBLE_STYLE.color,
+    opacity: Math.max(0, Math.min(100, Number(opacity ?? DEFAULT_BUBBLE_STYLE.opacity)))
+  };
+}
+
+function getBubblePositionReference(positionSpace) {
+  if (positionSpace === BUBBLE_POSITION_SPACE) {
+    return { width: BUBBLE_REFERENCE_WIDTH, height: BUBBLE_REFERENCE_HEIGHT };
+  }
+  return { width: LEGACY_BUBBLE_REFERENCE_WIDTH, height: LEGACY_BUBBLE_REFERENCE_HEIGHT };
+}
+
+function projectBubblePointToFrame(x, y, positionSpace, imageWidth, imageHeight, frameWidth, frameHeight) {
+  const reference = getBubblePositionReference(positionSpace);
+  const safeImageWidth = Number(imageWidth) || BUBBLE_REFERENCE_WIDTH;
+  const safeImageHeight = Number(imageHeight) || BUBBLE_REFERENCE_HEIGHT;
+  const referenceScale = Math.max(reference.width / safeImageWidth, reference.height / safeImageHeight);
+  const referenceOffsetX = (reference.width - safeImageWidth * referenceScale) / 2;
+  const referenceOffsetY = (reference.height - safeImageHeight * referenceScale) / 2;
+  const imageX = (Number(x) - referenceOffsetX) / referenceScale;
+  const imageY = (Number(y) - referenceOffsetY) / referenceScale;
+  const targetScale = Math.max(frameWidth / safeImageWidth, frameHeight / safeImageHeight);
+  const targetOffsetX = (frameWidth - safeImageWidth * targetScale) / 2;
+  const targetOffsetY = (frameHeight - safeImageHeight * targetScale) / 2;
+
+  return {
+    left: targetOffsetX + imageX * targetScale,
+    top: targetOffsetY + imageY * targetScale
+  };
+}
+
+function framePointToBubbleReference(left, top, imageWidth, imageHeight, frameWidth, frameHeight) {
+  const safeImageWidth = Number(imageWidth) || BUBBLE_REFERENCE_WIDTH;
+  const safeImageHeight = Number(imageHeight) || BUBBLE_REFERENCE_HEIGHT;
+  const frameScale = Math.max(frameWidth / safeImageWidth, frameHeight / safeImageHeight);
+  const frameOffsetX = (frameWidth - safeImageWidth * frameScale) / 2;
+  const frameOffsetY = (frameHeight - safeImageHeight * frameScale) / 2;
+  const imageX = (Number(left) - frameOffsetX) / frameScale;
+  const imageY = (Number(top) - frameOffsetY) / frameScale;
+  const referenceScale = Math.max(
+    BUBBLE_REFERENCE_WIDTH / safeImageWidth,
+    BUBBLE_REFERENCE_HEIGHT / safeImageHeight
+  );
+  const referenceOffsetX = (BUBBLE_REFERENCE_WIDTH - safeImageWidth * referenceScale) / 2;
+  const referenceOffsetY = (BUBBLE_REFERENCE_HEIGHT - safeImageHeight * referenceScale) / 2;
+
+  return {
+    x: referenceOffsetX + imageX * referenceScale,
+    y: referenceOffsetY + imageY * referenceScale
   };
 }
 
 function normalizeQuote(quote, index) {
   const source = quote || {};
   const hasPosition = Number.isFinite(Number(source.x)) && Number.isFinite(Number(source.y));
-  const usesHeroSpace = source.positionSpace === 'hero' || !hasPosition;
+  const usesLegacyHeroSpace = source.positionSpace === 'hero' || source.positionSpace === LEGACY_BUBBLE_POSITION_SPACE;
+  const usesCanonicalHeroSpace = source.positionSpace === BUBBLE_POSITION_SPACE || !hasPosition;
   const fallbackPositions = [
-    [574, 46],
-    [525, 219],
-    [809, 241]
+    [768, 72],
+    [704, 288],
+    [1072, 315]
   ];
   const fallback = fallbackPositions[index % fallbackPositions.length];
   const rawX = hasPosition ? Number(source.x) : fallback[0];
   const rawY = hasPosition ? Number(source.y) : fallback[1];
+  const positionSpace = usesCanonicalHeroSpace ? BUBBLE_POSITION_SPACE : LEGACY_BUBBLE_POSITION_SPACE;
+  const reference = getBubblePositionReference(positionSpace);
+  const normalizedX = usesLegacyHeroSpace || usesCanonicalHeroSpace ? rawX : rawX - 120;
+  const normalizedY = usesLegacyHeroSpace || usesCanonicalHeroSpace ? rawY : rawY - 75;
+  const bubbleStyle = normalizeBubbleStyle(source);
 
   return {
     id: cleanText(source.id) || `quote-${Date.now()}-${index}`,
     text: cleanText(source.text, '새로운 대사를 입력하세요.'),
     tail: ['L', 'C', 'R'].includes(source.tail) ? source.tail : 'C',
-    x: Math.max(0, Math.min(1200, usesHeroSpace ? rawX : rawX - 120)),
-    y: Math.max(0, Math.min(750, usesHeroSpace ? rawY : rawY - 75)),
-    positionSpace: 'hero',
-    bgGradient: normalizeGradient(source.bgGradient)
+    x: Math.max(0, Math.min(reference.width, normalizedX)),
+    y: Math.max(0, Math.min(reference.height, normalizedY)),
+    positionSpace,
+    bubbleColor: bubbleStyle.color,
+    bubbleOpacity: bubbleStyle.opacity
   };
 }
 
@@ -158,6 +242,8 @@ function isUnchangedFigmaExample(book) {
   });
   const quoteStylesMatch = quotes.length === 3 && quotes.every((quote, index) => {
     const gradient = quote.bgGradient || {};
+    const bubbleColor = String(quote.bubbleColor || gradient.color1 || '').toUpperCase();
+    const bubbleOpacity = Number(quote.bubbleOpacity ?? gradient.opacity);
     const isOriginalBrown =
       String(gradient.color1).toUpperCase() === '#664D3F' &&
       String(gradient.color2).toUpperCase() === '#1B100A';
@@ -166,9 +252,9 @@ function isUnchangedFigmaExample(book) {
       String(gradient.color2).toUpperCase() === '#0F766E';
     return (
       quote.tail === ['R', 'C', 'L'][index] &&
-      (isOriginalBrown || isFigmaTeal) &&
-      gradient.direction === '135deg' &&
-      Number(gradient.opacity) === 90
+      (isOriginalBrown || isFigmaTeal || bubbleColor === '#664D3F' || bubbleColor === '#2DD4BF') &&
+      (!quote.bgGradient || gradient.direction === '135deg') &&
+      bubbleOpacity === 90
     );
   });
 
@@ -192,6 +278,11 @@ function isUnchangedFigmaExample(book) {
   );
 }
 
+function isLegacyTemporaryBook(book) {
+  const expectedTitle = LEGACY_TEMP_BOOK_TITLES.get(String(book?.id || ''));
+  return Boolean(expectedTitle && book?.title === expectedTitle);
+}
+
 function readStoredArray(key) {
   try {
     const parsed = JSON.parse(localStorage.getItem(key) || '[]');
@@ -202,13 +293,170 @@ function readStoredArray(key) {
   }
 }
 
+async function requestServerJson(url, options = {}) {
+  const response = await fetch(url, {
+    cache: 'no-store',
+    ...options,
+    headers: {
+      ...(options.body && typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {})
+    }
+  });
+  if (!response.ok) {
+    const message = await response.json().catch(() => ({}));
+    throw new Error(message.error || `서버 요청 실패 (${response.status})`);
+  }
+  return response.json();
+}
+
+function localBooksForServerSeed() {
+  if (localStorage.getItem(STORAGE_KEY) !== null) {
+    return readStoredArray(STORAGE_KEY)
+      .filter((book) => !isLegacyTemporaryBook(book) && !isUnchangedFigmaExample(book))
+      .map(normalizeBook);
+  }
+  return migrateBooks();
+}
+
+function applyServerState(state, notify = true) {
+  serverAvailable = true;
+  serverInitialized = Boolean(state?.initialized);
+  serverStateUpdatedAt = Number(state?.updatedAt) || 0;
+  serverBgm = state?.bgm && typeof state.bgm === 'object' ? state.bgm : null;
+
+  if (!serverInitialized) return;
+
+  const normalizedBooks = (Array.isArray(state.books) ? state.books : [])
+    .map(normalizeBook)
+    .sort((left, right) => left.shelfOrder - right.shelfOrder);
+  const previousBooks = localStorage.getItem(STORAGE_KEY) || '[]';
+  const nextBooks = JSON.stringify(normalizedBooks);
+  localStorage.setItem(STORAGE_KEY, nextBooks);
+
+  const currentSettings = getSiteSettings();
+  const nextSettings = {
+    bgmName: serverBgm?.name || '',
+    bgmUpdatedAt: Number(serverBgm?.updatedAt) || 0
+  };
+  localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(nextSettings));
+
+  if (notify && previousBooks !== nextBooks) {
+    window.dispatchEvent(new CustomEvent(BOOKS_UPDATED_EVENT, { detail: normalizedBooks }));
+  }
+  if (
+    notify &&
+    (currentSettings.bgmName !== nextSettings.bgmName || currentSettings.bgmUpdatedAt !== nextSettings.bgmUpdatedAt)
+  ) {
+    window.dispatchEvent(new CustomEvent('surang:site-settings', { detail: nextSettings }));
+  }
+}
+
+async function uploadServerBgm(file, fileName = file?.name || 'homepage-bgm.mp3') {
+  const nextState = await requestServerJson(SERVER_BGM_ENDPOINT, {
+    method: 'PUT',
+    body: file,
+    headers: {
+      'Content-Type': file?.type || 'audio/mpeg',
+      'X-File-Name': encodeURIComponent(fileName)
+    }
+  });
+  applyServerState(nextState, false);
+  return nextState;
+}
+
+async function initializeSurangData({ allowLocalSeed = false } = {}) {
+  try {
+    const state = await requestServerJson(SERVER_STATE_ENDPOINT);
+    serverAvailable = true;
+
+    if (state.initialized) {
+      applyServerState(state, false);
+      startServerPolling();
+      return { source: 'server', initialized: true };
+    }
+
+    if (!allowLocalSeed) {
+      serverInitialized = false;
+      serverBgm = null;
+      startServerPolling();
+      return { source: 'server', initialized: false };
+    }
+
+    const books = localBooksForServerSeed();
+    const legacySettings = getSiteSettings();
+    let legacyBgm = null;
+    try {
+      legacyBgm = await readSiteAsset(HOMEPAGE_BGM_ASSET_KEY);
+    } catch (error) {
+      console.warn('기존 BGM 저장소를 읽지 못했습니다.', error);
+    }
+    const initializedState = await requestServerJson(SERVER_INITIALIZE_ENDPOINT, {
+      method: 'POST',
+      body: JSON.stringify({ books })
+    });
+    applyServerState(initializedState, false);
+
+    if (!initializedState.bgm) {
+      try {
+        if (legacyBgm) {
+          await uploadServerBgm(legacyBgm, legacySettings.bgmName || legacyBgm.name || 'homepage-bgm.mp3');
+        }
+      } catch (error) {
+        console.warn('기존 BGM을 서버 저장소로 이전하지 못했습니다.', error);
+      }
+    }
+
+    startServerPolling();
+    return { source: 'server', initialized: true, migrated: true };
+  } catch (error) {
+    serverAvailable = false;
+    serverInitialized = false;
+    console.warn('공용 데이터 서버에 연결하지 못해 브라우저 저장소를 사용합니다.', error);
+    return { source: 'browser', initialized: true, error };
+  }
+}
+
+function queueServerBooksWrite(books) {
+  if (!serverAvailable || !serverInitialized) return;
+  remoteWriteQueue = remoteWriteQueue
+    .catch(() => undefined)
+    .then(async () => {
+      const state = await requestServerJson(SERVER_BOOKS_ENDPOINT, {
+        method: 'PUT',
+        body: JSON.stringify({ books })
+      });
+      applyServerState(state, false);
+    })
+    .catch((error) => {
+      console.error('관리자 책 데이터를 서버에 저장하지 못했습니다.', error);
+      window.dispatchEvent(new CustomEvent('surang:data-sync-error', { detail: error }));
+    });
+}
+
+async function refreshServerState() {
+  if (!serverAvailable) return;
+  try {
+    const state = await requestServerJson(SERVER_STATE_ENDPOINT);
+    if (Number(state.updatedAt) !== serverStateUpdatedAt || Boolean(state.initialized) !== serverInitialized) {
+      applyServerState(state, true);
+    }
+  } catch (error) {
+    console.warn('공용 데이터 갱신에 실패했습니다.', error);
+  }
+}
+
+function startServerPolling() {
+  if (!serverAvailable || serverPollTimer) return;
+  serverPollTimer = window.setInterval(refreshServerState, SERVER_POLL_INTERVAL);
+}
+
 function migrateBooks() {
   for (const key of LEGACY_STORAGE_KEYS) {
     if (localStorage.getItem(key) === null) continue;
     const legacyBooks = readStoredArray(key);
-    const migrated = key === 'surang_books_db_v4'
-      ? legacyBooks.filter((book) => !isUnchangedFigmaExample(book))
-      : legacyBooks;
+    const migrated = legacyBooks.filter((book) => (
+      !isLegacyTemporaryBook(book) && !isUnchangedFigmaExample(book)
+    ));
     const normalized = migrated.map(normalizeBook);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     return normalized;
@@ -219,6 +467,7 @@ function migrateBooks() {
 }
 
 function getBooks() {
+  if (serverAvailable && !serverInitialized) return [];
   if (localStorage.getItem(STORAGE_KEY) === null) return migrateBooks();
   return readStoredArray(STORAGE_KEY)
     .map(normalizeBook)
@@ -230,6 +479,8 @@ function saveBooks(books) {
     .map(normalizeBook)
     .sort((left, right) => left.shelfOrder - right.shelfOrder);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+  window.dispatchEvent(new CustomEvent(BOOKS_UPDATED_EVENT, { detail: normalized }));
+  queueServerBooksWrite(normalized);
   return normalized;
 }
 
@@ -280,6 +531,136 @@ function subscribeBooks(listener) {
   const handleStorage = (event) => {
     if (event.key === STORAGE_KEY) listener(getBooks());
   };
+  const handleLocalUpdate = (event) => listener(event.detail || getBooks());
   window.addEventListener('storage', handleStorage);
-  return () => window.removeEventListener('storage', handleStorage);
+  window.addEventListener(BOOKS_UPDATED_EVENT, handleLocalUpdate);
+  startServerPolling();
+  return () => {
+    window.removeEventListener('storage', handleStorage);
+    window.removeEventListener(BOOKS_UPDATED_EVENT, handleLocalUpdate);
+  };
+}
+
+function getSiteSettings() {
+  const fallback = { bgmName: '', bgmUpdatedAt: 0 };
+  try {
+    const stored = JSON.parse(localStorage.getItem(SITE_SETTINGS_KEY) || '{}');
+    return {
+      bgmName: cleanText(stored.bgmName),
+      bgmUpdatedAt: Number(stored.bgmUpdatedAt) || 0
+    };
+  } catch (error) {
+    console.warn('홈페이지 설정을 읽지 못했습니다.', error);
+    return fallback;
+  }
+}
+
+function writeSiteSettings(settings) {
+  const next = {
+    ...getSiteSettings(),
+    ...settings,
+    bgmUpdatedAt: Date.now()
+  };
+  localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent('surang:site-settings', { detail: next }));
+  return next;
+}
+
+function openSiteAssetDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SITE_ASSET_DB_NAME, 1);
+    request.addEventListener('upgradeneeded', () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(SITE_ASSET_STORE)) {
+        database.createObjectStore(SITE_ASSET_STORE);
+      }
+    });
+    request.addEventListener('success', () => resolve(request.result));
+    request.addEventListener('error', () => reject(request.error));
+  });
+}
+
+async function readSiteAsset(key) {
+  const database = await openSiteAssetDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(SITE_ASSET_STORE, 'readonly');
+    const request = transaction.objectStore(SITE_ASSET_STORE).get(key);
+    request.addEventListener('success', () => resolve(request.result || null));
+    request.addEventListener('error', () => reject(request.error));
+    transaction.addEventListener('complete', () => database.close());
+  });
+}
+
+async function writeSiteAsset(key, value) {
+  const database = await openSiteAssetDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(SITE_ASSET_STORE, 'readwrite');
+    transaction.objectStore(SITE_ASSET_STORE).put(value, key);
+    transaction.addEventListener('complete', () => {
+      database.close();
+      resolve(value);
+    });
+    transaction.addEventListener('error', () => reject(transaction.error));
+  });
+}
+
+async function deleteSiteAsset(key) {
+  const database = await openSiteAssetDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(SITE_ASSET_STORE, 'readwrite');
+    transaction.objectStore(SITE_ASSET_STORE).delete(key);
+    transaction.addEventListener('complete', () => {
+      database.close();
+      resolve();
+    });
+    transaction.addEventListener('error', () => reject(transaction.error));
+  });
+}
+
+async function saveHomepageBgm(file) {
+  await writeSiteAsset(HOMEPAGE_BGM_ASSET_KEY, file);
+  const settings = writeSiteSettings({ bgmName: file.name });
+  if (serverAvailable && serverInitialized) {
+    await uploadServerBgm(file, file.name);
+  }
+  return settings;
+}
+
+async function getHomepageBgm() {
+  if (serverAvailable && serverInitialized) {
+    if (!serverBgm) return { bgmName: '', bgmUpdatedAt: 0, blob: null };
+    const response = await fetch(SERVER_BGM_ENDPOINT, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`BGM 파일 요청 실패 (${response.status})`);
+    return {
+      bgmName: serverBgm.name || '',
+      bgmUpdatedAt: Number(serverBgm.updatedAt) || 0,
+      blob: await response.blob()
+    };
+  }
+  const settings = getSiteSettings();
+  const blob = await readSiteAsset(HOMEPAGE_BGM_ASSET_KEY);
+  return { ...settings, blob };
+}
+
+async function deleteHomepageBgm() {
+  await deleteSiteAsset(HOMEPAGE_BGM_ASSET_KEY);
+  if (serverAvailable && serverInitialized) {
+    const state = await requestServerJson(SERVER_BGM_ENDPOINT, { method: 'DELETE' });
+    applyServerState(state, false);
+  }
+  return writeSiteSettings({ bgmName: '' });
+}
+
+function subscribeSiteSettings(listener) {
+  const handleStorage = (event) => {
+    if (event.key === SITE_SETTINGS_KEY) listener(getSiteSettings());
+  };
+  const handleLocalUpdate = (event) => listener(event.detail || getSiteSettings());
+  window.addEventListener('storage', handleStorage);
+  window.addEventListener('surang:site-settings', handleLocalUpdate);
+  startServerPolling();
+  return () => {
+    window.removeEventListener('storage', handleStorage);
+    window.removeEventListener('surang:site-settings', handleLocalUpdate);
+  };
 }

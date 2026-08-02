@@ -10,3 +10,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Runtime data written by the local admin server
+data/surang-state.json
+data/homepage-bgm.bin

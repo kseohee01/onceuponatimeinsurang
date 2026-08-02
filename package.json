@@ -4,7 +4,8 @@
   "description": "Once Upon a Time in Surang - Fairy Tale themed bookshelf portfolio website",
   "main": "index.html",
   "scripts": {
-    "dev": "npx -y browser-sync start --server --files \"*.html, css/*.css, js/*.js\""
+    "dev": "node server.js",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
