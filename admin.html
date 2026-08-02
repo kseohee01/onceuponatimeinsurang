@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex">
   <title>이야기 책장 · System Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/admin.css?v=9">
+  <link rel="stylesheet" href="css/admin.css?v=10">
 </head>
 <body>
   <div id="admin-toast" class="admin-toast" role="status" aria-live="polite"></div>
@@ -150,16 +151,10 @@
 
           <form id="book-form" class="book-form">
             <input id="book-id" type="hidden">
-            <div class="two-fields">
-              <label class="form-field">
-                <span>책 제목</span>
-                <input id="book-title" type="text" placeholder="책 제목을 입력하세요" required>
-              </label>
-              <label class="form-field">
-                <span>책등 제목</span>
-                <input id="book-spine-title" type="text" placeholder="책장에 표시할 제목">
-              </label>
-            </div>
+            <label class="form-field">
+              <span>책 제목</span>
+              <input id="book-title" type="text" placeholder="책 제목을 입력하세요" required>
+            </label>
             <label class="form-field">
               <span>부제 <small>(북 팝업 · 상세 페이지 공통)</small></span>
               <input id="book-subtitle" type="text" placeholder="예: The Secret Garden">
@@ -172,12 +167,7 @@
             <div class="two-fields">
               <label class="form-field">
                 <span>콘셉트</span>
-                <select id="book-concept">
-                  <option>세계 명작</option>
-                  <option>환상 동화</option>
-                  <option>감성 소설</option>
-                  <option>모험 판타지</option>
-                </select>
+                <input id="book-concept" type="text" placeholder="콘셉트를 직접 입력하세요">
               </label>
               <label class="form-field">
                 <span>연락처</span>
@@ -346,7 +336,7 @@
   </div>
 
   <script src="js/firebase-config.js?v=1"></script>
-  <script src="js/db.js?v=5"></script>
-  <script src="js/admin.js?v=7"></script>
+  <script src="js/db.js?v=6"></script>
+  <script src="js/admin.js?v=8"></script>
 </body>
 </html>

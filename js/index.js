@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       button.style.backgroundSize = 'auto, cover';
       button.style.backgroundPosition = 'center';
     }
-    button.textContent = book.spineTitle || book.title;
+    button.textContent = book.title;
     button.setAttribute('aria-label', `${book.title} 열기`);
     button.addEventListener('click', () => openBook(book));
     return button;

@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let spineImage = '';
   let coverImage = '';
   let detailBgImage = '';
+  let pendingBookAssets = {
+    spineImage: null,
+    coverImage: null,
+    detailBgImage: null
+  };
   let editorQuotes = [];
   let selectedQuoteId = null;
   let toastTimer = null;
@@ -86,7 +91,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const searchable = [
         book.title,
         book.subtitle,
-        book.spineTitle,
         ...(book.participatingCharacters || [])
       ].join(' ').toLowerCase();
       const matchesQuery = !query || searchable.includes(query);
@@ -119,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const title = document.createElement('strong');
       title.textContent = book.title;
       const subtitle = document.createElement('small');
-      subtitle.textContent = book.subtitle || book.spineTitle;
+      subtitle.textContent = book.subtitle || book.title;
       titles.append(title, subtitle);
       bookWrap.append(thumb, titles);
       bookCell.appendChild(bookWrap);
@@ -264,9 +268,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function loadBookIntoForm(book) {
+    pendingBookAssets = { spineImage: null, coverImage: null, detailBgImage: null };
     field('book-id').value = book.id;
     field('book-title').value = book.title || '';
-    field('book-spine-title').value = book.spineTitle || book.title || '';
     field('book-subtitle').value = book.subtitle || '';
     field('book-concept').value = book.concept || '세계 명작';
     field('book-contact').value = book.contact || '';
@@ -282,6 +286,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     setUploadPreview('spine-preview', spineImage);
     setUploadPreview('cover-preview', coverImage);
     setUploadPreview('detail-preview', detailBgImage);
+    field('spine-upload').value = '';
+    field('cover-upload').value = '';
+    field('detail-upload').value = '';
     field('inspector-heading').textContent = '도서 상세 편집';
   }
 
@@ -295,6 +302,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     spineImage = '';
     coverImage = '';
     detailBgImage = '';
+    pendingBookAssets = { spineImage: null, coverImage: null, detailBgImage: null };
     renderCharacterChips();
     setUploadPreview('spine-preview', spineImage);
     setUploadPreview('cover-preview', coverImage);
@@ -334,33 +342,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   bindColorPair('book-spine-color', 'book-spine-color-text');
 
-  function bindUpload(inputId, previewId, assign) {
+  function bindUpload(inputId, previewId, fieldName) {
     field(inputId).addEventListener('change', (event) => {
       const file = event.target.files?.[0];
       if (!file) return;
       if (!file.type.startsWith('image/')) {
+        event.target.value = '';
         showToast('이미지 파일만 업로드할 수 있습니다.');
         return;
       }
+      if (file.size > MAX_BOOK_IMAGE_SIZE) {
+        event.target.value = '';
+        showToast('이미지는 파일당 15MB 이하만 업로드할 수 있습니다.');
+        return;
+      }
+      pendingBookAssets[fieldName] = file;
       const reader = new FileReader();
       reader.addEventListener('load', () => {
-        assign(String(reader.result));
         setUploadPreview(previewId, String(reader.result));
+      });
+      reader.addEventListener('error', () => {
+        pendingBookAssets[fieldName] = null;
+        event.target.value = '';
+        showToast('이미지 미리보기를 불러오지 못했습니다.');
       });
       reader.readAsDataURL(file);
     });
   }
 
-  bindUpload('spine-upload', 'spine-preview', (value) => { spineImage = value; });
-  bindUpload('cover-upload', 'cover-preview', (value) => { coverImage = value; });
-  bindUpload('detail-upload', 'detail-preview', (value) => { detailBgImage = value; });
+  bindUpload('spine-upload', 'spine-preview', 'spineImage');
+  bindUpload('cover-upload', 'cover-preview', 'coverImage');
+  bindUpload('detail-upload', 'detail-preview', 'detailBgImage');
 
   function formBookData(existing) {
     return {
       ...(existing || {}),
       id: field('book-id').value || undefined,
       title: field('book-title').value.trim(),
-      spineTitle: field('book-spine-title').value.trim() || field('book-title').value.trim(),
       subtitle: field('book-subtitle').value.trim(),
       concept: field('book-concept').value,
       contact: field('book-contact').value.trim(),
@@ -369,23 +387,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       spineColor: field('book-spine-color').value,
       spineHeight: Number(field('book-spine-height').value) || getAutomaticSpineHeight(getBooks().length),
       status: existing?.status || 'active',
-      spineImage,
-      coverImage,
-      detailBgImage,
+      spineImage: pendingBookAssets.spineImage || spineImage,
+      coverImage: pendingBookAssets.coverImage || coverImage,
+      detailBgImage: pendingBookAssets.detailBgImage || detailBgImage,
       quotes: existing?.quotes || []
     };
   }
 
-  bookForm.addEventListener('submit', (event) => {
+  bookForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const id = field('book-id').value;
     const existing = id ? getBookById(id) : null;
     const data = formBookData(existing);
-    const saved = existing ? updateBook(data) : addBook(data);
-    selectedBookId = saved.id;
-    loadBookIntoForm(saved);
-    renderDashboard();
-    showToast(existing ? '책 정보를 저장했습니다.' : '새로운 책을 등록했습니다.');
+    const submitButton = event.submitter || bookForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    bookForm.setAttribute('aria-busy', 'true');
+    try {
+      const saved = await saveBookWithAssets(data);
+      selectedBookId = saved.id;
+      loadBookIntoForm(saved);
+      renderDashboard();
+      showToast(existing ? '책 정보와 이미지를 저장했습니다.' : '새로운 책을 등록했습니다.');
+    } catch (error) {
+      console.error('책 저장 실패', error);
+      showToast(error?.message || '책 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      submitButton.disabled = false;
+      bookForm.removeAttribute('aria-busy');
+    }
   });
 
   field('new-book-button').addEventListener('click', () => {

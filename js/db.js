@@ -18,6 +18,8 @@ const BUBBLE_POSITION_SPACE = 'hero-16x9';
 const LEGACY_BUBBLE_REFERENCE_WIDTH = 1200;
 const LEGACY_BUBBLE_REFERENCE_HEIGHT = 750;
 const LEGACY_BUBBLE_POSITION_SPACE = 'hero-8x5';
+const MAX_BOOK_IMAGE_SIZE = 15 * 1024 * 1024;
+const BOOK_ASSET_FIELDS = ['spineImage', 'coverImage', 'detailBgImage'];
 
 const DEFAULT_BUBBLE_STYLE = {
   color: '#2DD4BF',
@@ -190,7 +192,8 @@ function normalizeBook(book, index = 0) {
     id: cleanText(source.id) || `book-${Date.now()}-${index}`,
     shelfOrder: Number.isFinite(Number(source.shelfOrder)) ? Number(source.shelfOrder) : index,
     title,
-    spineTitle: cleanText(source.spineTitle, title),
+    // 책등에는 별도의 사용자 입력값 대신 책 제목을 그대로 사용합니다.
+    spineTitle: title,
     subtitle: cleanText(source.subtitle),
     concept: cleanText(source.concept, '미분류'),
     description: cleanText(source.description),
@@ -224,7 +227,7 @@ function isUnchangedFigmaExample(book) {
   const preset = FIGMA_EXAMPLE_PRESETS[exampleIndex];
   if (!preset) return false;
 
-  const [spineTitle, title, subtitle, spineColor, spineHeight, characters] = preset;
+  const [, title, subtitle, spineColor, spineHeight, characters] = preset;
   const expectedConcept = exampleIndex % 3 === 0
     ? '세계 명작'
     : exampleIndex % 3 === 1
@@ -261,7 +264,6 @@ function isUnchangedFigmaExample(book) {
 
   return (
     book.title === title &&
-    book.spineTitle === spineTitle &&
     book.subtitle === subtitle &&
     book.concept === expectedConcept &&
     book.description === '서로 다른 이야기 속 인물들이 수랑고에서 만나 완성하는 단 하나의 동화입니다.' &&
@@ -406,18 +408,38 @@ function dataUrlContentType(value, fallback = 'application/octet-stream') {
   return /^data:([^;,]+)/i.exec(value || '')?.[1] || fallback;
 }
 
+function isBlob(value) {
+  return typeof Blob !== 'undefined' && value instanceof Blob;
+}
+
+function bookAssetContentType(value) {
+  if (isBlob(value) && value.type) return value.type;
+  return dataUrlContentType(value, 'image/png');
+}
+
+function createBookAssetPath(book, fieldName) {
+  const version = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `books/${book.id}/${fieldName}-${version}`;
+}
+
 async function uploadBookAsset(services, book, fieldName) {
   const value = book[fieldName];
-  if (!isDataUrl(value)) return value || '';
+  if (!isBlob(value) && !isDataUrl(value)) return value || '';
+  if (isBlob(value) && value.size > MAX_BOOK_IMAGE_SIZE) {
+    throw new Error(`${fieldName} 이미지가 15MB 제한을 초과했습니다.`);
+  }
 
   const assetReference = services.storage.ref(
     services.bucket,
-    `books/${book.id}/${fieldName}`
+    createBookAssetPath(book, fieldName)
   );
-  const snapshot = await services.storage.uploadString(assetReference, value, 'data_url', {
-    contentType: dataUrlContentType(value, 'image/png'),
+  const metadata = {
+    contentType: bookAssetContentType(value),
     cacheControl: 'public,max-age=31536000,immutable'
-  });
+  };
+  const snapshot = isBlob(value)
+    ? await services.storage.uploadBytes(assetReference, value, metadata)
+    : await services.storage.uploadString(assetReference, value, 'data_url', metadata);
   return services.storage.getDownloadURL(snapshot.ref);
 }
 
@@ -546,8 +568,8 @@ async function initializeSurangData({ allowLocalSeed = false } = {}) {
 }
 
 function queueCloudBooksWrite(books) {
-  if (!cloudAvailable || !cloudInitialized) return;
-  remoteWriteQueue = remoteWriteQueue
+  if (!cloudAvailable || !cloudInitialized) return Promise.resolve(null);
+  const writeTask = remoteWriteQueue
     .catch(() => undefined)
     .then(async () => {
       const services = await getCloudServices();
@@ -563,11 +585,13 @@ function queueCloudBooksWrite(books) {
       };
       await services.firestore.setDoc(cloudContentReference(services), state);
       applyCloudState(state, true);
-    })
-    .catch((error) => {
+      return state;
+    });
+  remoteWriteQueue = writeTask.catch((error) => {
       console.error('관리자 책 데이터를 Firestore에 저장하지 못했습니다.', error);
       window.dispatchEvent(new CustomEvent('surang:data-sync-error', { detail: error }));
     });
+  return writeTask;
 }
 
 function migrateBooks() {
@@ -600,8 +624,76 @@ function saveBooks(books) {
     .sort((left, right) => left.shelfOrder - right.shelfOrder);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
   window.dispatchEvent(new CustomEvent(BOOKS_UPDATED_EVENT, { detail: normalized }));
-  queueCloudBooksWrite(normalized);
+  void queueCloudBooksWrite(normalized);
   return normalized;
+}
+
+async function deleteCloudAssetUrls(services, urls) {
+  const targets = [...new Set(urls.filter((value) => /^https:\/\//i.test(value || '')))];
+  await Promise.all(targets.map(async (url) => {
+    try {
+      await services.storage.deleteObject(services.storage.ref(services.bucket, url));
+    } catch (error) {
+      if (error?.code !== 'storage/object-not-found') throw error;
+    }
+  }));
+}
+
+async function saveBookWithAssets(book) {
+  const books = getBooks();
+  const existingIndex = book?.id
+    ? books.findIndex((item) => item.id === book.id)
+    : -1;
+  const existing = existingIndex >= 0 ? books[existingIndex] : null;
+  const now = new Date().toISOString();
+  const nextOrder = books.reduce((highest, item) => Math.max(highest, item.shelfOrder), -1) + 1;
+  const id = existing?.id || `book-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const source = {
+    ...(existing || {}),
+    ...(book || {}),
+    id,
+    spineTitle: cleanText(book?.title, existing?.title || '제목 없는 이야기'),
+    shelfOrder: existing?.shelfOrder ?? nextOrder,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+  const replacedFields = BOOK_ASSET_FIELDS.filter((fieldName) => (
+    isBlob(source[fieldName]) || isDataUrl(source[fieldName])
+  ));
+  const previousAssetUrls = replacedFields.map((fieldName) => existing?.[fieldName]).filter(Boolean);
+  let services = null;
+  let preparedBook = source;
+
+  if (replacedFields.length) {
+    if (!cloudAvailable || !cloudInitialized) {
+      throw new Error('클라우드에 연결되지 않아 이미지를 저장할 수 없습니다.');
+    }
+    services = await getCloudServices();
+    preparedBook = await uploadBookAssets(services, source);
+  }
+
+  const normalizedBook = normalizeBook(preparedBook, existingIndex >= 0 ? existingIndex : books.length);
+  const nextBooks = existingIndex >= 0
+    ? books.map((item, index) => (index === existingIndex ? normalizedBook : item))
+    : [...books, normalizedBook];
+  const normalizedBooks = nextBooks
+    .map(normalizeBook)
+    .sort((left, right) => left.shelfOrder - right.shelfOrder);
+
+  // Base64나 File 객체는 브라우저 저장소에 넣지 않고, 업로드가 끝난 URL만 보관합니다.
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedBooks));
+  window.dispatchEvent(new CustomEvent(BOOKS_UPDATED_EVENT, { detail: normalizedBooks }));
+  await queueCloudBooksWrite(normalizedBooks);
+
+  if (services && previousAssetUrls.length) {
+    try {
+      await deleteCloudAssetUrls(services, previousAssetUrls);
+    } catch (error) {
+      console.warn('교체한 이전 책 이미지를 정리하지 못했습니다.', error);
+    }
+  }
+
+  return normalizedBooks.find((item) => item.id === id) || normalizedBook;
 }
 
 function getBookById(id) {
@@ -659,13 +751,7 @@ function queueCloudBookAssetDelete(book) {
       const services = await getCloudServices();
       const urls = [book.spineImage, book.coverImage, book.detailBgImage]
         .filter((value) => /^https:\/\//i.test(value || ''));
-      await Promise.all(urls.map(async (url) => {
-        try {
-          await services.storage.deleteObject(services.storage.ref(services.bucket, url));
-        } catch (error) {
-          if (error?.code !== 'storage/object-not-found') throw error;
-        }
-      }));
+      await deleteCloudAssetUrls(services, urls);
     })
     .catch((error) => {
       console.warn('삭제한 책의 Storage 에셋을 정리하지 못했습니다.', error);
