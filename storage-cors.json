@@ -1,0 +1,24 @@
+[
+  {
+    "origin": [
+      "https://kseohee01.github.io",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000"
+    ],
+    "method": [
+      "GET",
+      "HEAD",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "ETag",
+      "x-goog-generation",
+      "x-goog-meta-firebaseStorageDownloadTokens"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

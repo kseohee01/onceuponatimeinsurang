@@ -473,6 +473,11 @@ button:focus-visible {
   gap: 32px;
 }
 
+#btn-minigame,
+#btn-guest-note {
+  display: none;
+}
+
 .public-nav button {
   padding: 0;
   color: rgba(250, 245, 236, 0.7);

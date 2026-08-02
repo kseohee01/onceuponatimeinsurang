@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /site/content {
+      allow read: if true;
+      allow create, update: if
+        request.resource.data.keys().hasOnly([
+          'version',
+          'initialized',
+          'books',
+          'bgm',
+          'updatedAt'
+        ]) &&
+        request.resource.data.version == 1 &&
+        request.resource.data.initialized == true &&
+        request.resource.data.books is list &&
+        request.resource.data.books.size() <= 200 &&
+        request.resource.data.updatedAt is int;
+      allow delete: if false;
+    }
+  }
+}

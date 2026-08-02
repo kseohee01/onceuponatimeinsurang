@@ -4,12 +4,12 @@ const SITE_SETTINGS_KEY = 'surang_site_settings_v1';
 const SITE_ASSET_DB_NAME = 'surang_site_assets_v1';
 const SITE_ASSET_STORE = 'assets';
 const HOMEPAGE_BGM_ASSET_KEY = 'homepage-bgm';
-const SERVER_STATE_ENDPOINT = '/api/state';
-const SERVER_INITIALIZE_ENDPOINT = '/api/initialize';
-const SERVER_BOOKS_ENDPOINT = '/api/books';
-const SERVER_BGM_ENDPOINT = '/api/bgm';
+const LEGACY_SERVER_STATE_ENDPOINT = '/api/state';
+const LEGACY_SERVER_BGM_ENDPOINT = '/api/bgm';
 const BOOKS_UPDATED_EVENT = 'surang:books-updated';
-const SERVER_POLL_INTERVAL = 1500;
+const FIREBASE_SDK_VERSION = '12.17.0';
+const CLOUD_CONTENT_COLLECTION = 'site';
+const CLOUD_CONTENT_DOCUMENT = 'content';
 const FIGMA_COVER = 'assets/figma/popup-cover-art.png';
 const FIGMA_DETAIL = 'assets/figma/detail-hero.png';
 const BUBBLE_REFERENCE_WIDTH = 1600;
@@ -64,11 +64,12 @@ const LEGACY_TEMP_BOOK_TITLES = new Map([
   ['book-5', '달빛 아래 : 깊은 밤 하늘빛']
 ]);
 
-let serverAvailable = false;
-let serverInitialized = false;
-let serverStateUpdatedAt = 0;
-let serverBgm = null;
-let serverPollTimer = null;
+let cloudAvailable = false;
+let cloudInitialized = false;
+let cloudStateUpdatedAt = 0;
+let cloudBgm = null;
+let cloudUnsubscribe = null;
+let cloudServicesPromise = null;
 let remoteWriteQueue = Promise.resolve();
 
 function clone(value) {
@@ -293,7 +294,7 @@ function readStoredArray(key) {
   }
 }
 
-async function requestServerJson(url, options = {}) {
+async function requestLegacyServerJson(url, options = {}) {
   const response = await fetch(url, {
     cache: 'no-store',
     ...options,
@@ -304,7 +305,7 @@ async function requestServerJson(url, options = {}) {
   });
   if (!response.ok) {
     const message = await response.json().catch(() => ({}));
-    throw new Error(message.error || `서버 요청 실패 (${response.status})`);
+    throw new Error(message.error || `기존 서버 요청 실패 (${response.status})`);
   }
   return response.json();
 }
@@ -318,13 +319,59 @@ function localBooksForServerSeed() {
   return migrateBooks();
 }
 
-function applyServerState(state, notify = true) {
-  serverAvailable = true;
-  serverInitialized = Boolean(state?.initialized);
-  serverStateUpdatedAt = Number(state?.updatedAt) || 0;
-  serverBgm = state?.bgm && typeof state.bgm === 'object' ? state.bgm : null;
+async function getCloudServices() {
+  if (cloudServicesPromise) return cloudServicesPromise;
 
-  if (!serverInitialized) return;
+  cloudServicesPromise = Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`),
+    import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-storage.js`)
+  ]).then(([firebaseApp, firestore, storage]) => {
+    const config = window.SURANG_FIREBASE_CONFIG;
+    const databaseId = window.SURANG_FIREBASE_DATABASE_ID || 'surang';
+    if (!config?.projectId) throw new Error('Firebase 프로젝트 설정이 없습니다.');
+
+    const app = firebaseApp.getApps().length
+      ? firebaseApp.getApp()
+      : firebaseApp.initializeApp(config);
+
+    return {
+      app,
+      firestore,
+      storage,
+      database: firestore.getFirestore(app, databaseId),
+      bucket: storage.getStorage(app)
+    };
+  });
+
+  return cloudServicesPromise;
+}
+
+function cloudContentReference(services) {
+  return services.firestore.doc(
+    services.database,
+    CLOUD_CONTENT_COLLECTION,
+    CLOUD_CONTENT_DOCUMENT
+  );
+}
+
+function toCloudState(data) {
+  return {
+    version: Number(data?.version) || 1,
+    initialized: Boolean(data?.initialized),
+    books: Array.isArray(data?.books) ? data.books : [],
+    bgm: data?.bgm && typeof data.bgm === 'object' ? data.bgm : null,
+    updatedAt: Number(data?.updatedAt) || 0
+  };
+}
+
+function applyCloudState(state, notify = true) {
+  cloudAvailable = true;
+  cloudInitialized = Boolean(state?.initialized);
+  cloudStateUpdatedAt = Number(state?.updatedAt) || 0;
+  cloudBgm = state?.bgm && typeof state.bgm === 'object' ? state.bgm : null;
+
+  if (!cloudInitialized) return;
 
   const normalizedBooks = (Array.isArray(state.books) ? state.books : [])
     .map(normalizeBook)
@@ -335,8 +382,8 @@ function applyServerState(state, notify = true) {
 
   const currentSettings = getSiteSettings();
   const nextSettings = {
-    bgmName: serverBgm?.name || '',
-    bgmUpdatedAt: Number(serverBgm?.updatedAt) || 0
+    bgmName: cloudBgm?.name || '',
+    bgmUpdatedAt: Number(cloudBgm?.updatedAt) || 0
   };
   localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(nextSettings));
 
@@ -351,103 +398,176 @@ function applyServerState(state, notify = true) {
   }
 }
 
-async function uploadServerBgm(file, fileName = file?.name || 'homepage-bgm.mp3') {
-  const nextState = await requestServerJson(SERVER_BGM_ENDPOINT, {
-    method: 'PUT',
-    body: file,
-    headers: {
-      'Content-Type': file?.type || 'audio/mpeg',
-      'X-File-Name': encodeURIComponent(fileName)
-    }
+function isDataUrl(value) {
+  return typeof value === 'string' && /^data:[^;,]+(?:;[^,]*)?,/i.test(value);
+}
+
+function dataUrlContentType(value, fallback = 'application/octet-stream') {
+  return /^data:([^;,]+)/i.exec(value || '')?.[1] || fallback;
+}
+
+async function uploadBookAsset(services, book, fieldName) {
+  const value = book[fieldName];
+  if (!isDataUrl(value)) return value || '';
+
+  const assetReference = services.storage.ref(
+    services.bucket,
+    `books/${book.id}/${fieldName}`
+  );
+  const snapshot = await services.storage.uploadString(assetReference, value, 'data_url', {
+    contentType: dataUrlContentType(value, 'image/png'),
+    cacheControl: 'public,max-age=31536000,immutable'
   });
-  applyServerState(nextState, false);
-  return nextState;
+  return services.storage.getDownloadURL(snapshot.ref);
+}
+
+async function uploadBookAssets(services, book) {
+  const [spineImage, coverImage, detailBgImage] = await Promise.all([
+    uploadBookAsset(services, book, 'spineImage'),
+    uploadBookAsset(services, book, 'coverImage'),
+    uploadBookAsset(services, book, 'detailBgImage')
+  ]);
+  return normalizeBook({ ...book, spineImage, coverImage, detailBgImage }, book.shelfOrder);
+}
+
+async function uploadCloudBgm(services, file, fileName = file?.name || 'homepage-bgm.mp3') {
+  const contentType = file?.type || 'audio/mpeg';
+  const assetReference = services.storage.ref(services.bucket, 'site/bgm/homepage.mp3');
+  const snapshot = await services.storage.uploadBytes(assetReference, file, {
+    contentType,
+    cacheControl: 'public,max-age=3600'
+  });
+  return {
+    name: fileName,
+    type: contentType,
+    size: Number(file?.size) || 0,
+    path: snapshot.ref.fullPath,
+    url: await services.storage.getDownloadURL(snapshot.ref),
+    updatedAt: Date.now()
+  };
+}
+
+async function readLegacySeed() {
+  let books = localBooksForServerSeed();
+  let bgmFile = null;
+  let bgmName = '';
+
+  try {
+    bgmFile = await readSiteAsset(HOMEPAGE_BGM_ASSET_KEY);
+    bgmName = getSiteSettings().bgmName || bgmFile?.name || '';
+  } catch (error) {
+    console.warn('기존 브라우저 BGM을 읽지 못했습니다.', error);
+  }
+
+  try {
+    const state = await requestLegacyServerJson(LEGACY_SERVER_STATE_ENDPOINT);
+    if (state.initialized) {
+      if (Array.isArray(state.books)) books = state.books;
+      if (state.bgm) {
+        const response = await fetch(LEGACY_SERVER_BGM_ENDPOINT, { cache: 'no-store' });
+        if (response.ok) {
+          bgmFile = await response.blob();
+          bgmName = state.bgm.name || 'homepage-bgm.mp3';
+        }
+      }
+    }
+  } catch (error) {
+    // GitHub Pages에는 기존 Node API가 없으므로 브라우저 데이터만 사용합니다.
+  }
+
+  return { books, bgmFile, bgmName };
+}
+
+function startCloudSubscription(services) {
+  if (cloudUnsubscribe) return;
+  cloudUnsubscribe = services.firestore.onSnapshot(
+    cloudContentReference(services),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        cloudInitialized = false;
+        return;
+      }
+      const nextState = toCloudState(snapshot.data());
+      if (nextState.updatedAt !== cloudStateUpdatedAt || nextState.initialized !== cloudInitialized) {
+        applyCloudState(nextState, true);
+      }
+    },
+    (error) => {
+      console.warn('Firestore 실시간 동기화가 중단되었습니다.', error);
+      window.dispatchEvent(new CustomEvent('surang:data-sync-error', { detail: error }));
+    }
+  );
 }
 
 async function initializeSurangData({ allowLocalSeed = false } = {}) {
   try {
-    const state = await requestServerJson(SERVER_STATE_ENDPOINT);
-    serverAvailable = true;
+    const services = await getCloudServices();
+    const snapshot = await services.firestore.getDoc(cloudContentReference(services));
+    cloudAvailable = true;
 
-    if (state.initialized) {
-      applyServerState(state, false);
-      startServerPolling();
-      return { source: 'server', initialized: true };
+    if (snapshot.exists()) {
+      const state = toCloudState(snapshot.data());
+      applyCloudState(state, false);
+      startCloudSubscription(services);
+      return { source: 'firestore', initialized: true };
     }
 
     if (!allowLocalSeed) {
-      serverInitialized = false;
-      serverBgm = null;
-      startServerPolling();
-      return { source: 'server', initialized: false };
+      cloudInitialized = false;
+      cloudBgm = null;
+      startCloudSubscription(services);
+      return { source: 'firestore', initialized: false };
     }
 
-    const books = localBooksForServerSeed();
-    const legacySettings = getSiteSettings();
-    let legacyBgm = null;
-    try {
-      legacyBgm = await readSiteAsset(HOMEPAGE_BGM_ASSET_KEY);
-    } catch (error) {
-      console.warn('기존 BGM 저장소를 읽지 못했습니다.', error);
-    }
-    const initializedState = await requestServerJson(SERVER_INITIALIZE_ENDPOINT, {
-      method: 'POST',
-      body: JSON.stringify({ books })
-    });
-    applyServerState(initializedState, false);
-
-    if (!initializedState.bgm) {
-      try {
-        if (legacyBgm) {
-          await uploadServerBgm(legacyBgm, legacySettings.bgmName || legacyBgm.name || 'homepage-bgm.mp3');
-        }
-      } catch (error) {
-        console.warn('기존 BGM을 서버 저장소로 이전하지 못했습니다.', error);
-      }
-    }
-
-    startServerPolling();
-    return { source: 'server', initialized: true, migrated: true };
+    const legacy = await readLegacySeed();
+    const books = await Promise.all(
+      legacy.books.map(normalizeBook).map((book) => uploadBookAssets(services, book))
+    );
+    const bgm = legacy.bgmFile
+      ? await uploadCloudBgm(services, legacy.bgmFile, legacy.bgmName)
+      : null;
+    const initializedState = {
+      version: 1,
+      initialized: true,
+      books,
+      bgm,
+      updatedAt: Date.now()
+    };
+    await services.firestore.setDoc(cloudContentReference(services), initializedState);
+    applyCloudState(initializedState, false);
+    startCloudSubscription(services);
+    return { source: 'firestore', initialized: true, migrated: true };
   } catch (error) {
-    serverAvailable = false;
-    serverInitialized = false;
-    console.warn('공용 데이터 서버에 연결하지 못해 브라우저 저장소를 사용합니다.', error);
+    cloudAvailable = false;
+    cloudInitialized = false;
+    console.warn('Firestore에 연결하지 못해 브라우저 저장소를 사용합니다.', error);
     return { source: 'browser', initialized: true, error };
   }
 }
 
-function queueServerBooksWrite(books) {
-  if (!serverAvailable || !serverInitialized) return;
+function queueCloudBooksWrite(books) {
+  if (!cloudAvailable || !cloudInitialized) return;
   remoteWriteQueue = remoteWriteQueue
     .catch(() => undefined)
     .then(async () => {
-      const state = await requestServerJson(SERVER_BOOKS_ENDPOINT, {
-        method: 'PUT',
-        body: JSON.stringify({ books })
-      });
-      applyServerState(state, false);
+      const services = await getCloudServices();
+      const uploadedBooks = await Promise.all(
+        books.map((book) => uploadBookAssets(services, book))
+      );
+      const state = {
+        version: 1,
+        initialized: true,
+        books: uploadedBooks,
+        bgm: cloudBgm,
+        updatedAt: Date.now()
+      };
+      await services.firestore.setDoc(cloudContentReference(services), state);
+      applyCloudState(state, true);
     })
     .catch((error) => {
-      console.error('관리자 책 데이터를 서버에 저장하지 못했습니다.', error);
+      console.error('관리자 책 데이터를 Firestore에 저장하지 못했습니다.', error);
       window.dispatchEvent(new CustomEvent('surang:data-sync-error', { detail: error }));
     });
-}
-
-async function refreshServerState() {
-  if (!serverAvailable) return;
-  try {
-    const state = await requestServerJson(SERVER_STATE_ENDPOINT);
-    if (Number(state.updatedAt) !== serverStateUpdatedAt || Boolean(state.initialized) !== serverInitialized) {
-      applyServerState(state, true);
-    }
-  } catch (error) {
-    console.warn('공용 데이터 갱신에 실패했습니다.', error);
-  }
-}
-
-function startServerPolling() {
-  if (!serverAvailable || serverPollTimer) return;
-  serverPollTimer = window.setInterval(refreshServerState, SERVER_POLL_INTERVAL);
 }
 
 function migrateBooks() {
@@ -467,7 +587,7 @@ function migrateBooks() {
 }
 
 function getBooks() {
-  if (serverAvailable && !serverInitialized) return [];
+  if (cloudAvailable && !cloudInitialized) return [];
   if (localStorage.getItem(STORAGE_KEY) === null) return migrateBooks();
   return readStoredArray(STORAGE_KEY)
     .map(normalizeBook)
@@ -480,7 +600,7 @@ function saveBooks(books) {
     .sort((left, right) => left.shelfOrder - right.shelfOrder);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
   window.dispatchEvent(new CustomEvent(BOOKS_UPDATED_EVENT, { detail: normalized }));
-  queueServerBooksWrite(normalized);
+  queueCloudBooksWrite(normalized);
   return normalized;
 }
 
@@ -521,10 +641,35 @@ function updateBook(updatedBook) {
 }
 
 function deleteBook(id) {
-  const books = getBooks()
+  const currentBooks = getBooks();
+  const removedBook = currentBooks.find((book) => book.id === id);
+  const books = currentBooks
     .filter((book) => book.id !== id)
     .map((book, index) => ({ ...book, shelfOrder: index }));
-  return saveBooks(books);
+  const saved = saveBooks(books);
+  if (removedBook) queueCloudBookAssetDelete(removedBook);
+  return saved;
+}
+
+function queueCloudBookAssetDelete(book) {
+  if (!cloudAvailable || !cloudInitialized) return;
+  remoteWriteQueue = remoteWriteQueue
+    .catch(() => undefined)
+    .then(async () => {
+      const services = await getCloudServices();
+      const urls = [book.spineImage, book.coverImage, book.detailBgImage]
+        .filter((value) => /^https:\/\//i.test(value || ''));
+      await Promise.all(urls.map(async (url) => {
+        try {
+          await services.storage.deleteObject(services.storage.ref(services.bucket, url));
+        } catch (error) {
+          if (error?.code !== 'storage/object-not-found') throw error;
+        }
+      }));
+    })
+    .catch((error) => {
+      console.warn('삭제한 책의 Storage 에셋을 정리하지 못했습니다.', error);
+    });
 }
 
 function subscribeBooks(listener) {
@@ -534,7 +679,6 @@ function subscribeBooks(listener) {
   const handleLocalUpdate = (event) => listener(event.detail || getBooks());
   window.addEventListener('storage', handleStorage);
   window.addEventListener(BOOKS_UPDATED_EVENT, handleLocalUpdate);
-  startServerPolling();
   return () => {
     window.removeEventListener('storage', handleStorage);
     window.removeEventListener(BOOKS_UPDATED_EVENT, handleLocalUpdate);
@@ -619,21 +763,28 @@ async function deleteSiteAsset(key) {
 
 async function saveHomepageBgm(file) {
   await writeSiteAsset(HOMEPAGE_BGM_ASSET_KEY, file);
-  const settings = writeSiteSettings({ bgmName: file.name });
-  if (serverAvailable && serverInitialized) {
-    await uploadServerBgm(file, file.name);
+  if (cloudAvailable && cloudInitialized) {
+    const services = await getCloudServices();
+    const bgm = await uploadCloudBgm(services, file, file.name);
+    await services.firestore.setDoc(cloudContentReference(services), {
+      version: 1,
+      initialized: true,
+      bgm,
+      updatedAt: Date.now()
+    }, { merge: true });
+    cloudBgm = bgm;
   }
-  return settings;
+  return writeSiteSettings({ bgmName: file.name });
 }
 
 async function getHomepageBgm() {
-  if (serverAvailable && serverInitialized) {
-    if (!serverBgm) return { bgmName: '', bgmUpdatedAt: 0, blob: null };
-    const response = await fetch(SERVER_BGM_ENDPOINT, { cache: 'no-store' });
+  if (cloudAvailable && cloudInitialized) {
+    if (!cloudBgm?.url) return { bgmName: '', bgmUpdatedAt: 0, blob: null };
+    const response = await fetch(cloudBgm.url);
     if (!response.ok) throw new Error(`BGM 파일 요청 실패 (${response.status})`);
     return {
-      bgmName: serverBgm.name || '',
-      bgmUpdatedAt: Number(serverBgm.updatedAt) || 0,
+      bgmName: cloudBgm.name || '',
+      bgmUpdatedAt: Number(cloudBgm.updatedAt) || 0,
       blob: await response.blob()
     };
   }
@@ -644,9 +795,21 @@ async function getHomepageBgm() {
 
 async function deleteHomepageBgm() {
   await deleteSiteAsset(HOMEPAGE_BGM_ASSET_KEY);
-  if (serverAvailable && serverInitialized) {
-    const state = await requestServerJson(SERVER_BGM_ENDPOINT, { method: 'DELETE' });
-    applyServerState(state, false);
+  if (cloudAvailable && cloudInitialized) {
+    const services = await getCloudServices();
+    const path = cloudBgm?.path || 'site/bgm/homepage.mp3';
+    try {
+      await services.storage.deleteObject(services.storage.ref(services.bucket, path));
+    } catch (error) {
+      if (error?.code !== 'storage/object-not-found') throw error;
+    }
+    await services.firestore.setDoc(cloudContentReference(services), {
+      version: 1,
+      initialized: true,
+      bgm: null,
+      updatedAt: Date.now()
+    }, { merge: true });
+    cloudBgm = null;
   }
   return writeSiteSettings({ bgmName: '' });
 }
@@ -658,7 +821,6 @@ function subscribeSiteSettings(listener) {
   const handleLocalUpdate = (event) => listener(event.detail || getSiteSettings());
   window.addEventListener('storage', handleStorage);
   window.addEventListener('surang:site-settings', handleLocalUpdate);
-  startServerPolling();
   return () => {
     window.removeEventListener('storage', handleStorage);
     window.removeEventListener('surang:site-settings', handleLocalUpdate);
