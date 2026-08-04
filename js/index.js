@@ -145,17 +145,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     let previousTime = performance.now();
 
     function createMotes(width, height) {
-      const count = width < 768 ? 24 : 38;
+      const count = width < 768 ? 44 : 68;
       return Array.from({ length: count }, (_, index) => {
         const sparkle = index % 5 === 0;
+        const bokeh = !sparkle && index % 3 === 1;
         return {
           sparkle,
+          bokeh,
           x: Math.random() * width,
           y: Math.random() * height,
-          radius: sparkle ? 1 + Math.random() * 1.6 : 20 + Math.random() * 48,
-          speed: sparkle ? 4 + Math.random() * 8 : 7 + Math.random() * 15,
-          drift: 8 + Math.random() * 25,
-          alpha: sparkle ? 0.24 + Math.random() * 0.35 : 0.035 + Math.random() * 0.075,
+          radius: sparkle
+            ? 1 + Math.random() * 1.6
+            : bokeh
+              ? 38 + Math.random() * 72
+              : 10 + Math.random() * 30,
+          speed: sparkle ? 4 + Math.random() * 8 : bokeh ? 2 + Math.random() * 6 : 6 + Math.random() * 12,
+          drift: bokeh ? 12 + Math.random() * 34 : 8 + Math.random() * 25,
+          alpha: sparkle
+            ? 0.24 + Math.random() * 0.35
+            : bokeh
+              ? 0.05 + Math.random() * 0.1
+              : 0.035 + Math.random() * 0.075,
           phase: Math.random() * Math.PI * 2,
           twinkle: 0.8 + Math.random() * 1.8
         };
@@ -218,6 +228,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const gradient = context.createRadialGradient(x, mote.y, 0, x, mote.y, mote.radius);
+        if (mote.bokeh) {
+          gradient.addColorStop(0, `rgba(255, 235, 202, ${mote.alpha * pulse * 0.72})`);
+          gradient.addColorStop(0.22, `rgba(255, 211, 164, ${mote.alpha * pulse * 0.34})`);
+          gradient.addColorStop(0.66, `rgba(225, 176, 132, ${mote.alpha * pulse * 0.09})`);
+          gradient.addColorStop(1, 'rgba(225, 176, 132, 0)');
+          context.fillStyle = gradient;
+          context.beginPath();
+          context.arc(x, mote.y, mote.radius, 0, Math.PI * 2);
+          context.fill();
+          return;
+        }
         gradient.addColorStop(0, `rgba(255, 224, 196, ${mote.alpha * pulse})`);
         gradient.addColorStop(0.42, `rgba(230, 190, 160, ${mote.alpha * 0.55 * pulse})`);
         gradient.addColorStop(1, 'rgba(230, 190, 160, 0)');

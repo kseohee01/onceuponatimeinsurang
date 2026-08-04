@@ -3,32 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Keep the storybook palette fixed even when the device is in dark mode. -->
   <meta name="color-scheme" content="light">
   <meta name="description" content="수랑고등학교 동화 AU 페어 이야기 책장">
   <title>Once Upon a Time in Surang</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Fredericka+the+Great&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Instrument+Sans:wght@400;500;600&family=Marcellus+SC&family=Nanum+Myeongjo:wght@400;700;800&family=Rochester&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/index.css?v=18">
+  <link rel="stylesheet" href="css/index.css?v=19">
 </head>
-<body>
+<body data-color-mode="fixed-light">
   <audio id="site-bgm-audio" loop autoplay preload="auto"></audio>
   <div id="app-toast" class="app-toast" role="status" aria-live="polite"></div>
 
   <section id="view-intro" class="view-section active intro-view" aria-label="인트로">
-    <img class="ambient-photo intro-ambient-photo" src="assets/figma/intro-bg.jpg" alt="" aria-hidden="true">
-    <img class="window-light intro-window" src="assets/figma/desktop-intro-window-light.png" alt="" aria-hidden="true">
-    <img class="dust-art" src="assets/figma/desktop-intro-dust-layer.png" alt="" aria-hidden="true">
-    <img class="mobile-intro-window" src="assets/figma/mobile-intro-window-light.svg" alt="" aria-hidden="true">
-    <img class="mobile-intro-dust" src="assets/figma/mobile-intro-dust.svg" alt="" aria-hidden="true">
-    <canvas class="ambient-particle-canvas intro-particle-canvas" aria-hidden="true"></canvas>
+    <img class="intro-bg intro-desktop-art" src="assets/figma/intro-pc-background.jpg" alt="" aria-hidden="true" fetchpriority="high">
+    <img class="intro-bg intro-mobile-art" src="assets/figma/intro-mobile-background.jpg" alt="" aria-hidden="true" fetchpriority="high">
+    <img class="intro-mobile-bg-photo intro-mobile-art" src="assets/figma/intro-mobile-bg-photo.jpg" alt="" aria-hidden="true">
 
+    <!-- Decorative layers from Surangintro-page-pc2. -->
+    <img class="intro-decor intro-desktop-art intro-pc-doily" src="assets/figma/intro-pc-doily.svg" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-deco-left" src="assets/figma/intro-pc-deco-left.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-deco-right" src="assets/figma/intro-pc-deco-right.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-letter-left" src="assets/figma/intro-pc-letter.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-letter-right" src="assets/figma/intro-pc-letter.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-keyboard" src="assets/figma/intro-pc-keyboard.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-watch" src="assets/figma/intro-pc-watch.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-rose" src="assets/figma/intro-pc-rose.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-tulip" src="assets/figma/intro-pc-tulip.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-book-mini" src="assets/figma/intro-pc-book-mini.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-book" src="assets/figma/intro-pc-book.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-apple" src="assets/figma/intro-pc-apple.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-butterfly" src="assets/figma/intro-pc-butterfly.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-desktop-art intro-pc-window" src="assets/figma/intro-pc-window-light.svg" alt="" aria-hidden="true">
+
+    <!-- Decorative layers from intro-page-mobile2. -->
+    <img class="intro-decor intro-mobile-art intro-mobile-doily" src="assets/figma/intro-mobile-doily.svg" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-deco-left" src="assets/figma/intro-mobile-deco-left.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-deco-right" src="assets/figma/intro-mobile-deco-right.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-letter-left" src="assets/figma/intro-mobile-letter.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-letter-right" src="assets/figma/intro-mobile-letter.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-keyboard" src="assets/figma/intro-mobile-keyboard.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-watch" src="assets/figma/intro-mobile-watch.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-rose" src="assets/figma/intro-mobile-rose.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-tulip" src="assets/figma/intro-mobile-tulip.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-book" src="assets/figma/intro-mobile-book.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-apple" src="assets/figma/intro-mobile-apple.png" alt="" aria-hidden="true">
+    <img class="intro-decor intro-mobile-art intro-mobile-window" src="assets/figma/intro-mobile-window-light.svg" alt="" aria-hidden="true">
+
+    <canvas class="ambient-particle-canvas intro-particle-canvas" aria-hidden="true"></canvas>
     <button class="site-bgm-widget intro-bgm-widget" type="button" aria-label="BGM 재생" aria-pressed="false">
       <span class="bgm-state-icon" aria-hidden="true"></span>
       <span>BGM</span>
     </button>
 
     <div class="intro-book">
+      <img class="intro-cover-frame intro-desktop-art" src="assets/figma/intro-pc-cover-frame.png" alt="" aria-hidden="true">
+      <img class="intro-cover-frame intro-cover-overlay intro-desktop-art" src="assets/figma/intro-pc-cover-overlay.png" alt="" aria-hidden="true">
+      <img class="intro-cover-frame intro-mobile-art" src="assets/figma/intro-mobile-cover-frame.png" alt="" aria-hidden="true">
+      <img class="intro-cover-frame intro-cover-overlay intro-mobile-art" src="assets/figma/intro-mobile-cover-overlay.png" alt="" aria-hidden="true">
       <img class="cover-glow" src="assets/figma/cover-glow.svg" alt="" aria-hidden="true">
       <div class="intro-book-inner">
         <img class="school-emblem" src="assets/figma/school-emblem.png" alt="">
@@ -40,11 +73,8 @@
         <p class="intro-subtitle">SURANG HIGHSCHOOL FAIRYTALE AU</p>
         <img class="intro-divider" src="assets/figma/ornate-divider.svg" alt="">
         <img class="mobile-intro-divider" src="assets/figma/mobile-intro-divider.svg" alt="" aria-hidden="true">
-        <button id="btn-enter" class="start-button" type="button">
-          <span>START</span>
-          <img src="assets/figma/arrow-right.svg" alt="">
-        </button>
-        <p class="intro-school">Surang High School</p>
+        <button id="btn-enter" class="start-button" type="button"><span>START</span></button>
+        <p class="intro-school">SURANG HIGHSCHOOL</p>
       </div>
     </div>
   </section>
