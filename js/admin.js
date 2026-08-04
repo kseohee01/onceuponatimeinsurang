@@ -17,10 +17,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   let characters = [];
   let spineImage = '';
   let coverImage = '';
+  let mobileCoverImage = '';
   let detailBgImage = '';
   let pendingBookAssets = {
     spineImage: null,
     coverImage: null,
+    mobileCoverImage: null,
     detailBgImage: null
   };
   let editorQuotes = [];
@@ -268,7 +270,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function loadBookIntoForm(book) {
-    pendingBookAssets = { spineImage: null, coverImage: null, detailBgImage: null };
+    pendingBookAssets = { spineImage: null, coverImage: null, mobileCoverImage: null, detailBgImage: null };
     field('book-id').value = book.id;
     field('book-title').value = book.title || '';
     field('book-subtitle').value = book.subtitle || '';
@@ -282,13 +284,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     characters = [...(book.participatingCharacters || [])];
     spineImage = book.spineImage || '';
     coverImage = book.coverImage || '';
+    mobileCoverImage = book.mobileCoverImage || '';
     detailBgImage = book.detailBgImage || '';
     renderCharacterChips();
     setUploadPreview('spine-preview', spineImage);
     setUploadPreview('cover-preview', coverImage);
+    setUploadPreview('mobile-cover-preview', mobileCoverImage);
     setUploadPreview('detail-preview', detailBgImage);
     field('spine-upload').value = '';
     field('cover-upload').value = '';
+    field('mobile-cover-upload').value = '';
     field('detail-upload').value = '';
     field('inspector-heading').textContent = '도서 상세 편집';
   }
@@ -303,11 +308,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     characters = [];
     spineImage = '';
     coverImage = '';
+    mobileCoverImage = '';
     detailBgImage = '';
-    pendingBookAssets = { spineImage: null, coverImage: null, detailBgImage: null };
+    pendingBookAssets = { spineImage: null, coverImage: null, mobileCoverImage: null, detailBgImage: null };
     renderCharacterChips();
     setUploadPreview('spine-preview', spineImage);
     setUploadPreview('cover-preview', coverImage);
+    setUploadPreview('mobile-cover-preview', mobileCoverImage);
     setUploadPreview('detail-preview', detailBgImage);
     field('inspector-heading').textContent = '새로운 책 등록';
   }
@@ -374,6 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   bindUpload('spine-upload', 'spine-preview', 'spineImage');
   bindUpload('cover-upload', 'cover-preview', 'coverImage');
+  bindUpload('mobile-cover-upload', 'mobile-cover-preview', 'mobileCoverImage');
   bindUpload('detail-upload', 'detail-preview', 'detailBgImage');
 
   function formBookData(existing) {
@@ -392,6 +400,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       status: existing?.status || 'active',
       spineImage: pendingBookAssets.spineImage || spineImage,
       coverImage: pendingBookAssets.coverImage || coverImage,
+      mobileCoverImage: pendingBookAssets.mobileCoverImage || mobileCoverImage,
       detailBgImage: pendingBookAssets.detailBgImage || detailBgImage,
       quotes: existing?.quotes || []
     };
@@ -608,7 +617,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const bubble = document.createElement('div');
       bubble.className = `preview-bubble tail-${quote.tail || 'C'}${quote.id === selectedQuoteId ? ' selected' : ''}`;
       bubble.dataset.quoteId = quote.id;
-      bubble.textContent = quote.text || '대사를 입력하세요.';
+      const bubbleText = document.createElement('span');
+      bubbleText.className = 'preview-bubble-text';
+      bubbleText.textContent = quote.text || '대사를 입력하세요.';
+      bubble.appendChild(bubbleText);
       const bubbleColor = quote.bubbleColor || DEFAULT_BUBBLE_STYLE.color;
       const bubbleOpacity = Number(quote.bubbleOpacity ?? DEFAULT_BUBBLE_STYLE.opacity);
       const bubbleBackground = rgbaFromHex(bubbleColor, bubbleOpacity);

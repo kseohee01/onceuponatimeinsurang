@@ -10,14 +10,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const introBook = document.querySelector('.intro-book');
   const introMobileStage = document.querySelector('.intro-mobile-stage');
   const shelfLayoutStage = document.querySelector('.shelf-layout-stage');
+  const shelfWindowLight = document.querySelector('.shelf-pc-window-light');
   const bgmAudio = document.getElementById('site-bgm-audio');
   const bgmWidgets = [...document.querySelectorAll('.site-bgm-widget')];
-  const booksPerShelf = 5;
+  const booksPerShelf = 6;
   let selectedBook = null;
   let uiVisible = true;
   let detailLandscape = false;
   let toastTimer = null;
   let viewTransitionTimer = null;
+  let popupCloseTimer = null;
   let bgmObjectUrl = '';
   let bgmName = '';
   let bgmUpdatedAt = 0;
@@ -27,6 +29,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   let detailRenderSequence = 0;
   const detailImagePreloads = new Map();
 
+  function resetTransientNavigationState() {
+    clearTimeout(popupCloseTimer);
+    clearTimeout(viewTransitionTimer);
+    selectedBook = null;
+    modal.classList.remove('open', 'closing-fade', 'close-immediate');
+    modal.querySelector('.open-book').style.removeProperty('transform');
+    Object.values(views).forEach((view) => {
+      view.classList.remove('active', 'view-entering', 'view-leaving', 'view-preparing');
+    });
+    views.intro.classList.add('active');
+    document.body.dataset.view = 'intro';
+  }
+
+  resetTransientNavigationState();
+
   function updateIntroBookScale() {
     const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
     const viewportHeight = window.innerHeight;
@@ -35,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const designHeight = mobile ? 844 : 900;
     const scale = Math.min(viewportWidth / designWidth, viewportHeight / designHeight);
     introBook.style.setProperty('--intro-book-scale', String(scale));
+    views.bookshelf.style.setProperty('--shelf-stage-scale', String(scale));
     if (mobile) {
       const stageWidth = 390 * scale;
       const stageHeight = 844 * scale;
@@ -56,6 +74,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shelfSideExtension = Math.max(0, (siteFrameWidth - shelfStageWidth) / 2 / scale);
     shelfLayoutStage.style.setProperty('--shelf-left-extension', `${-shelfSideExtension}px`);
     shelfLayoutStage.style.setProperty('--shelf-right-extension', `${-shelfSideExtension}px`);
+    if (!mobile) {
+      const shelfStageHeight = designHeight * scale;
+      shelfWindowLight.style.setProperty('--shelf-light-left', `${(viewportWidth - shelfStageWidth) / 2 + 631 * scale}px`);
+      shelfWindowLight.style.setProperty('--shelf-light-top', `${(viewportHeight - shelfStageHeight) / 2 - 92 * scale}px`);
+      shelfWindowLight.style.setProperty('--shelf-light-width', `${910 * scale}px`);
+      shelfWindowLight.style.setProperty('--shelf-light-height', `${729 * scale}px`);
+    }
     views.intro.classList.add('intro-scale-ready');
     views.bookshelf.classList.add('shelf-scale-ready');
   }
@@ -188,26 +213,71 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openBook(book) {
+    clearTimeout(popupCloseTimer);
+    modal.classList.remove('closing-fade', 'close-immediate');
+    modal.querySelector('.open-book').style.removeProperty('transform');
     selectedBook = book;
-    document.getElementById('popup-cover-img').src = book.coverImage || FIGMA_COVER;
+    document.getElementById('popup-cover-img').src = getPopupCoverSource(book);
     document.getElementById('popup-project-label').textContent = book.concept || '페어명';
     document.getElementById('popup-characters-row').textContent =
       (book.participatingCharacters || []).slice(0, 3).join('  X  ') || '캐릭터 이름 X 캐릭터 이름';
-    document.getElementById('popup-book-subtitle').textContent = book.subtitle || 'Once Upon a Time';
+    document.querySelector('#popup-book-subtitle .popup-english-track').textContent =
+      book.subtitle || 'Once Upon a Time';
     document.getElementById('popup-book-title').textContent = book.title;
     document.getElementById('popup-book-desc').textContent =
       book.description || `${book.title}의 인물들이 수랑고에서 만나 새롭게 써 내려가는 이야기입니다.`;
     preloadDetailImage(book.detailBgImage || FIGMA_DETAIL);
     updatePopupScale();
     modal.classList.add('open');
+    requestAnimationFrame(updatePopupTypography);
     document.getElementById('btn-close-popup').focus();
+  }
+
+  function getPopupCoverSource(book) {
+    const isMobileLayout = window.matchMedia('(max-aspect-ratio: 1 / 1)').matches;
+    if (isMobileLayout) {
+      return book.mobileCoverImage || book.coverImage || FIGMA_COVER;
+    }
+    return book.coverImage || book.mobileCoverImage || FIGMA_COVER;
+  }
+
+  function updatePopupTypography() {
+    const subtitle = document.getElementById('popup-book-subtitle');
+    const subtitleTrack = subtitle.querySelector('.popup-english-track');
+    const title = document.getElementById('popup-book-title');
+
+    subtitle.classList.remove('is-overflowing');
+    subtitle.style.removeProperty('--popup-subtitle-shift');
+    subtitle.style.removeProperty('--popup-subtitle-duration');
+    title.style.removeProperty('font-size');
+
+    const titleBaseSize = Number.parseFloat(getComputedStyle(title).fontSize) || 36;
+    if (title.scrollWidth > title.clientWidth) {
+      const fittedSize = Math.max(18, Math.floor(titleBaseSize * title.clientWidth / title.scrollWidth * 10) / 10);
+      title.style.fontSize = `${fittedSize}px`;
+    }
+
+    const subtitleOverflow = Math.ceil(subtitleTrack.scrollWidth - subtitle.clientWidth);
+    if (subtitleOverflow > 0) {
+      subtitle.style.setProperty('--popup-subtitle-shift', `${subtitleOverflow}px`);
+      subtitle.style.setProperty('--popup-subtitle-duration', `${Math.min(14, Math.max(7, 5 + subtitleOverflow / 36))}s`);
+      subtitle.classList.add('is-overflowing');
+    }
   }
 
   function closeBook({ animate = false } = {}) {
     if (!modal.classList.contains('open')) return;
     if (animate) {
+      clearTimeout(popupCloseTimer);
+      const popupBook = modal.querySelector('.open-book');
+      popupBook.style.transform = getComputedStyle(popupBook).transform;
       modal.classList.remove('close-immediate');
+      modal.classList.add('closing-fade');
       modal.classList.remove('open');
+      popupCloseTimer = window.setTimeout(() => {
+        modal.classList.remove('closing-fade');
+        popupBook.style.removeProperty('transform');
+      }, 300);
       return;
     }
     modal.classList.add('close-immediate');
@@ -457,7 +527,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     (book.quotes || []).slice(0, 8).forEach((quote) => {
       const bubble = document.createElement('div');
       bubble.className = `story-bubble tail-${quote.tail || 'C'}`;
-      bubble.textContent = quote.text;
+      const bubbleText = document.createElement('span');
+      bubbleText.className = 'story-bubble-text';
+      bubbleText.textContent = quote.text;
+      bubble.appendChild(bubbleText);
       const bubbleColor = quote.bubbleColor || DEFAULT_BUBBLE_STYLE.color;
       const bubbleOpacity = Number(quote.bubbleOpacity ?? DEFAULT_BUBBLE_STYLE.opacity);
       const bubbleBackground = rgbaFromHex(bubbleColor, bubbleOpacity);
@@ -644,12 +717,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && bgmPlayRequested && bgmAudio.paused) tryPlayBgm();
   });
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) resetTransientNavigationState();
+  });
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement && detailLandscape) setDetailLandscape(false, { exitFullscreen: false });
   });
   window.addEventListener('resize', () => {
     updateIntroBookScale();
     updatePopupScale();
+    if (modal.classList.contains('open')) {
+      if (selectedBook) document.getElementById('popup-cover-img').src = getPopupCoverSource(selectedBook);
+      requestAnimationFrame(updatePopupTypography);
+    }
     updateBubbleLayout();
   });
   document.getElementById('detail-bg-img').addEventListener('load', updateBubbleLayout);

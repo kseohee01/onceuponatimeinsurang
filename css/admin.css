@@ -966,7 +966,7 @@ tr.selected .row-actions {
 
 .upload-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -1169,20 +1169,30 @@ tr.selected .row-actions {
   position: absolute;
   display: flex;
   width: max-content;
-  max-width: 16.56cqw;
-  min-height: 2.17cqw;
+  max-width: 21cqw;
+  min-height: 2.292cqw;
   align-items: center;
-  padding: 0.457cqw 0.913cqw;
-  border: 0.057cqw solid rgba(255, 255, 255, 0.12);
-  border-radius: 1.142cqw;
+  padding: 0.556cqw 1.111cqw;
+  border: 0;
+  border-radius: 1.389cqw;
   background: var(--bubble-background, rgba(45, 212, 191, 0.9));
   box-shadow: 0 0.229cqw 0.743cqw rgba(0, 0, 0, 0.25);
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.96);
   cursor: grab;
-  font: 0.8cqw/1.5 "Gowun Dodum", sans-serif;
+  font: 500 0.972cqw/normal "Instrument Sans", sans-serif;
+  text-shadow: 0 0 0.556cqw rgba(255, 255, 255, 0.5);
   user-select: none;
   backdrop-filter: blur(0.137cqw);
   isolation: isolate;
+}
+
+.preview-bubble-text {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(180deg, #fff, #c3c3c3);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 .preview-bubble:active {
@@ -1236,7 +1246,8 @@ tr.selected .row-actions {
 }
 
 .preview-bubble.tail-L::after {
-  left: 1.256cqw;
+  left: 1.528cqw;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
 .preview-bubble.tail-C::after {
@@ -1245,7 +1256,8 @@ tr.selected .row-actions {
 }
 
 .preview-bubble.tail-R::after {
-  right: 1.256cqw;
+  right: 1.25cqw;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
 }
 
 .preview-help {

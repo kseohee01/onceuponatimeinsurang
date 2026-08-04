@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/admin.css?v=10">
+  <link rel="stylesheet" href="css/admin.css?v=12">
 </head>
 <body>
   <div id="admin-toast" class="admin-toast" role="status" aria-live="polite"></div>
@@ -205,9 +205,17 @@
                 </span>
               </label>
               <label class="upload-box">
-                <span>펼친 책 이미지</span>
+                <span>북 팝업 이미지 (PC)</span>
                 <input id="cover-upload" type="file" accept="image/*">
                 <span id="cover-preview" class="upload-preview">
+                  <img class="placeholder-icon" src="assets/figma/admin-image-up.svg" alt="">
+                  <small>이미지 업로드</small>
+                </span>
+              </label>
+              <label class="upload-box">
+                <span>북 팝업 이미지 (모바일)</span>
+                <input id="mobile-cover-upload" type="file" accept="image/*">
+                <span id="mobile-cover-preview" class="upload-preview">
                   <img class="placeholder-icon" src="assets/figma/admin-image-up.svg" alt="">
                   <small>이미지 업로드</small>
                 </span>
@@ -340,7 +348,7 @@
   </div>
 
   <script src="js/firebase-config.js?v=1"></script>
-  <script src="js/db.js?v=7"></script>
-  <script src="js/admin.js?v=9"></script>
+  <script src="js/db.js?v=8"></script>
+  <script src="js/admin.js?v=11"></script>
 </body>
 </html>

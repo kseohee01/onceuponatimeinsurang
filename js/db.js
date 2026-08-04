@@ -19,7 +19,7 @@ const LEGACY_BUBBLE_REFERENCE_WIDTH = 1200;
 const LEGACY_BUBBLE_REFERENCE_HEIGHT = 750;
 const LEGACY_BUBBLE_POSITION_SPACE = 'hero-8x5';
 const MAX_BOOK_IMAGE_SIZE = 15 * 1024 * 1024;
-const BOOK_ASSET_FIELDS = ['spineImage', 'coverImage', 'detailBgImage'];
+const BOOK_ASSET_FIELDS = ['spineImage', 'coverImage', 'mobileCoverImage', 'detailBgImage'];
 
 const DEFAULT_BUBBLE_STYLE = {
   color: '#2DD4BF',
@@ -213,6 +213,7 @@ function normalizeBook(book, index = 0) {
       : 60,
     spineImage: typeof source.spineImage === 'string' ? source.spineImage : '',
     coverImage: typeof source.coverImage === 'string' ? source.coverImage : '',
+    mobileCoverImage: typeof source.mobileCoverImage === 'string' ? source.mobileCoverImage : '',
     detailBgImage: typeof source.detailBgImage === 'string' ? source.detailBgImage : '',
     quotes,
     createdAt: cleanText(source.createdAt, now),
@@ -448,12 +449,13 @@ async function uploadBookAsset(services, book, fieldName) {
 }
 
 async function uploadBookAssets(services, book) {
-  const [spineImage, coverImage, detailBgImage] = await Promise.all([
+  const [spineImage, coverImage, mobileCoverImage, detailBgImage] = await Promise.all([
     uploadBookAsset(services, book, 'spineImage'),
     uploadBookAsset(services, book, 'coverImage'),
+    uploadBookAsset(services, book, 'mobileCoverImage'),
     uploadBookAsset(services, book, 'detailBgImage')
   ]);
-  return normalizeBook({ ...book, spineImage, coverImage, detailBgImage }, book.shelfOrder);
+  return normalizeBook({ ...book, spineImage, coverImage, mobileCoverImage, detailBgImage }, book.shelfOrder);
 }
 
 async function uploadCloudBgm(services, file, fileName = file?.name || 'homepage-bgm.mp3') {
@@ -753,7 +755,7 @@ function queueCloudBookAssetDelete(book) {
     .catch(() => undefined)
     .then(async () => {
       const services = await getCloudServices();
-      const urls = [book.spineImage, book.coverImage, book.detailBgImage]
+      const urls = [book.spineImage, book.coverImage, book.mobileCoverImage, book.detailBgImage]
         .filter((value) => /^https:\/\//i.test(value || ''));
       await deleteCloudAssetUrls(services, urls);
     })

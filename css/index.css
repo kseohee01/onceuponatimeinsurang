@@ -24,9 +24,9 @@ body[data-color-mode="fixed-light"] {
 html,
 body {
   width: 100%;
-  min-width: 1080px;
+  min-width: 0;
   height: 100%;
-  min-height: 680px;
+  min-height: 0;
   margin: 0;
   overflow: hidden;
   background: var(--brown-950);
@@ -472,7 +472,7 @@ button:focus-visible {
   transform-origin: center;
   border: 0;
   border-radius: 0;
-  background: transparent;
+  background: linear-gradient(44.4deg, #664d3f 5.1%, #1b100a 45.74%, #6b4f3b 96.58%);
 }
 
 .intro-book-canvas {
@@ -795,8 +795,18 @@ button:focus-visible {
 }
 
 .public-logo img {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.public-logo-badge {
+  display: flex;
   width: 28px;
   height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
 }
 
 .public-nav {
@@ -835,7 +845,7 @@ button:focus-visible {
 
 .shelf-layout-stage {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   top: 50%;
   left: 50%;
   width: 1440px;
@@ -844,6 +854,100 @@ button:focus-visible {
   transform: translate(-50%, -50%) scale(var(--shelf-stage-scale, 1));
   transform-origin: center;
   pointer-events: none;
+}
+
+.shelf-pc-bg-solid-group,
+.shelf-pc-top-dim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.shelf-pc-bg-solid-group {
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.shelf-pc-top-dim {
+  z-index: 4;
+  right: 0;
+  bottom: auto;
+  height: 121px;
+  background: linear-gradient(180deg, rgba(27, 16, 10, 0.5), rgba(27, 16, 10, 0));
+}
+
+.shelf-pc-cabinet {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 2px);
+  width: 850px;
+  overflow: hidden;
+  background: transparent;
+  mix-blend-mode: multiply;
+  transform: translateX(-50%) scaleX(var(--shelf-stage-scale, 1));
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.shelf-pc-cabinet img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.shelf-pc-frame {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 4px);
+  display: block;
+  width: 905px;
+  height: 100%;
+  object-fit: fill;
+  transform: translateX(-50%) scaleX(var(--shelf-stage-scale, 1));
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.shelf-pc-window-light {
+  position: fixed;
+  z-index: 21;
+  top: var(--shelf-light-top, -129px);
+  left: var(--shelf-light-left, 595px);
+  display: none;
+  width: var(--shelf-light-width, 983px);
+  height: var(--shelf-light-height, 802px);
+  mix-blend-mode: plus-lighter;
+  pointer-events: none;
+}
+
+body[data-view="bookshelf"] > .shelf-pc-window-light {
+  display: block;
+}
+
+.shelf-pc-light-overlay {
+  mix-blend-mode: plus-lighter;
+}
+
+/* Desktop bookshelf hierarchy from the current bookshelf-main-pc frame:
+   background(0) < solid frame(1) < multiplied wood photo(2) < shelves(3)
+   < dim/light(4) < header(5). */
+@media (min-aspect-ratio: 1 / 1) {
+  .shelf-view > .rose-overlay,
+  .shelf-view > .ambient-particle-canvas,
+  .public-header > .site-bgm-widget,
+  .public-header > .public-nav {
+    display: none;
+  }
 }
 
 .shelf-view.shelf-scale-ready .shelf-layout-stage {
@@ -879,9 +983,10 @@ button:focus-visible {
 
 .shelf-row {
   position: relative;
+  width: 812px;
   min-height: 284px;
   flex: 0 0 284px;
-  margin: 0;
+  margin: 0 auto;
 }
 
 .shelf-view.shelf-animating .shelf-row {
@@ -963,7 +1068,7 @@ button:focus-visible {
   min-height: 0;
   align-items: flex-end;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .book-spine {
@@ -979,7 +1084,7 @@ button:focus-visible {
   border: 2px solid transparent;
   border-radius: 6px 6px 2px 2px;
   background: var(--spine-color);
-  box-shadow: 4px 0 4px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 -5px 11.35px rgba(0, 0, 0, 0.25);
   color: #fff;
   cursor: pointer;
   font: 700 13px/normal "Nanum Myeongjo", serif;
@@ -998,20 +1103,38 @@ button:focus-visible {
   box-shadow:
     0 0 4px rgba(227, 209, 185, 0.5),
     0 0 12px rgba(227, 209, 185, 0.28),
-    4px 0 4px rgba(0, 0, 0, 0.25);
+    0 -5px 11.35px rgba(0, 0, 0, 0.25);
 }
 
 .wood-beam {
   position: absolute;
-  right: var(--shelf-right-extension, 0);
+  right: 0;
   bottom: 0;
-  left: var(--shelf-left-extension, 0);
+  left: 0;
   height: 24px;
   border: 0;
   border-top: 3px solid #674e3e;
-  background: rgba(80, 57, 43, 0.2);
+  background-color: rgba(80, 57, 43, 0.2);
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(2.5px);
+  overflow: hidden;
+}
+
+.wood-beam::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1440px;
+  height: 960px;
+  content: "";
+  background: url("../assets/figma/shelf-pc-wood-texture.png") 0 0 / 1440px 960px no-repeat;
+  mix-blend-mode: soft-light;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.shelf-row:first-child .wood-beam {
+  background-color: #21140b;
 }
 
 .empty-shelf-message {
@@ -1074,27 +1197,36 @@ button:focus-visible {
   animation: popup-book-float 3.2s ease-in-out 700ms infinite alternate;
 }
 
+.modal-overlay:not(.open) {
+  pointer-events: none;
+}
+
+.modal-overlay.closing-fade {
+  visibility: visible;
+  opacity: 0;
+  transition: opacity 280ms ease, visibility 0s linear 280ms;
+}
+
+.modal-overlay.closing-fade .open-book,
+.modal-overlay.closing-fade .popup-page,
+.modal-overlay.closing-fade .popup-gutter {
+  animation: none;
+  transition: none;
+}
+
+.modal-overlay.closing-fade .popup-page-left,
+.modal-overlay.closing-fade .popup-page-right {
+  transform: perspective(1400px) rotateY(0deg);
+}
+
+.modal-overlay.closing-fade .popup-gutter {
+  opacity: 1;
+}
+
 .modal-overlay.close-immediate,
 .modal-overlay.close-immediate * {
   transition: none !important;
   animation: none !important;
-}
-
-.popup-window-light {
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  mix-blend-mode: plus-lighter;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 420ms ease 180ms;
-}
-
-.modal-overlay.open .popup-window-light {
-  opacity: 0.4;
 }
 
 .popup-page {
@@ -1281,13 +1413,16 @@ button:focus-visible {
 .popup-title {
   position: relative;
   z-index: 1;
+  width: 100%;
   margin: 0;
+  overflow: hidden;
   background: linear-gradient(1deg, #775a4a 4%, #bc6161 96%);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
   font: 700 36px/normal "Gowun Batang", serif;
   text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
+  white-space: nowrap;
 }
 
 .popup-divider {
@@ -1297,15 +1432,35 @@ button:focus-visible {
 }
 
 .popup-description {
-  display: -webkit-box;
+  display: block;
+  min-height: 0;
+  flex: 1 1 auto;
   max-width: 100%;
   margin: 0;
-  overflow: hidden;
+  padding-right: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
   color: #8f6348;
   font: 15px/1.6 "Gowun Dodum", sans-serif;
   text-shadow: 0 0 4px rgba(143, 99, 72, 0.25);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  scrollbar-color: rgba(143, 99, 72, 0.4) rgba(143, 99, 72, 0.1);
+  scrollbar-width: thin;
+}
+
+.popup-description::-webkit-scrollbar {
+  width: 5px;
+}
+
+.popup-description::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(143, 99, 72, 0.1);
+}
+
+.popup-description::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(143, 99, 72, 0.4);
 }
 
 .open-story-button {
@@ -1315,7 +1470,8 @@ button:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 0;
-  margin-top: auto;
+  margin-top: 16px;
+  flex: 0 0 48px;
   padding: 0 28px;
   border: 1px solid rgba(223, 186, 139, 0.2);
   border-radius: 999px;
@@ -1368,8 +1524,8 @@ button:focus-visible {
   z-index: 2;
   top: 50%;
   left: 50%;
-  width: min(83.333vw, calc(83.333vh * 8 / 5));
-  aspect-ratio: 8 / 5;
+  width: min(83.333vw, calc(83.333vh * 16 / 9));
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   transform: translate(-50%, -50%);
   border-radius: 8px;
@@ -1383,7 +1539,7 @@ button:focus-visible {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
 }
 
@@ -1453,8 +1609,8 @@ button:focus-visible {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(83.333vw, calc(83.333vh * 8 / 5));
-  aspect-ratio: 8 / 5;
+  width: min(83.333vw, calc(83.333vh * 16 / 9));
+  aspect-ratio: 16 / 9;
   container-type: inline-size;
   transform: translate(-50%, -50%);
   pointer-events: none;
@@ -1473,6 +1629,7 @@ button:focus-visible {
   border: 0;
   border-radius: 1.667cqw;
   background: var(--bubble-background, rgba(39, 39, 39, 0.5));
+  box-shadow: 0 0.229cqw 0.743cqw rgba(0, 0, 0, 0.25);
   color: rgba(255, 255, 255, 0.96);
   font: 500 1.167cqw/normal "Instrument Sans", sans-serif;
   text-shadow: 0 0 0.667cqw rgba(255, 255, 255, 0.5);
@@ -1481,6 +1638,15 @@ button:focus-visible {
   animation: story-bubble-float 5.4s ease-in-out infinite;
   transform-origin: center;
   isolation: isolate;
+}
+
+.story-bubble-text {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(180deg, #fff, #c3c3c3);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 .story-bubble.tail-L {
@@ -1534,7 +1700,7 @@ button:focus-visible {
 .story-bubble::after {
   position: absolute;
   z-index: 0;
-  bottom: -0.833cqw;
+  bottom: calc(-0.833cqw + 1px);
   width: 1.333cqw;
   height: 0.833cqw;
   content: "";
@@ -1543,7 +1709,8 @@ button:focus-visible {
 }
 
 .story-bubble.tail-L::after {
-  left: 1.256cqw;
+  left: 1.833cqw;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
 .story-bubble.tail-C::after {
@@ -1552,7 +1719,8 @@ button:focus-visible {
 }
 
 .story-bubble.tail-R::after {
-  right: 1.256cqw;
+  right: 1.5cqw;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
 }
 
 .detail-bottom-shade {
@@ -1571,9 +1739,10 @@ button:focus-visible {
   position: absolute;
   z-index: 2;
   bottom: 24px;
+  right: 51px;
   left: 51px;
   display: flex;
-  width: 534px;
+  width: auto;
   max-height: calc(100vh - 96px);
   flex-direction: column;
   align-items: flex-start;
@@ -1584,7 +1753,7 @@ button:focus-visible {
 .detail-meta-header {
   position: relative;
   display: flex;
-  width: 364px;
+  width: 100%;
   min-height: 61px;
   flex: 0 0 auto;
   flex-direction: column;
@@ -1607,8 +1776,9 @@ button:focus-visible {
   position: absolute;
   z-index: 0;
   top: 6px;
+  right: 0;
   left: 3px;
-  width: 364px;
+  width: auto;
   margin: 0;
   background: linear-gradient(180deg, rgba(250, 188, 129, 0.3), rgba(204, 177, 151, 0.3));
   background-clip: text;
@@ -1616,12 +1786,36 @@ button:focus-visible {
   color: transparent;
   font: 48px/normal "Rochester", cursive;
   filter: blur(1px);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.popup-english-track {
+  display: inline-block;
+  min-width: max-content;
+  will-change: transform;
+}
+
+.popup-english.is-overflowing .popup-english-track {
+  animation: popup-subtitle-roll var(--popup-subtitle-duration, 8s) ease-in-out infinite alternate;
+}
+
+@keyframes popup-subtitle-roll {
+  0%,
+  18% {
+    transform: translateX(0);
+  }
+
+  82%,
+  100% {
+    transform: translateX(calc(-1 * var(--popup-subtitle-shift, 0px)));
+  }
 }
 
 .detail-title {
   position: relative;
   z-index: 1;
-  width: 364px;
+  width: 100%;
   margin: 0;
   background: linear-gradient(1deg, #fff 4.5%, #f7e3cc 96.4%);
   background-clip: text;
@@ -1629,14 +1823,16 @@ button:focus-visible {
   color: transparent;
   font: 700 36px/normal "Gowun Batang", serif;
   text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .detail-description {
   flex: 0 1 auto;
   min-height: 24px;
   width: 100%;
-  max-width: 534px;
-  max-height: calc(100vh - 185px);
+  max-width: none;
+  max-height: 4.8em;
   margin: 0;
   padding-right: 8px;
   overflow-x: hidden;
@@ -1668,7 +1864,8 @@ button:focus-visible {
   position: absolute;
   z-index: 5;
   right: 35px;
-  bottom: 24px;
+  top: 80px;
+  bottom: auto;
   display: flex;
   width: 95px;
   height: 40px;
@@ -1801,6 +1998,18 @@ button:focus-visible {
 /* Figma provides a separate mobile composition. Use it for narrow portrait
    windows too, even when their CSS width exceeds the phone breakpoint. */
 @media (max-aspect-ratio: 999 / 1000) {
+  .shelf-pc-bg-solid-group,
+  .shelf-pc-top-dim,
+  .shelf-pc-cabinet,
+  .shelf-pc-frame,
+  .shelf-pc-window-light {
+    display: none;
+  }
+
+  body[data-view="bookshelf"] > .shelf-pc-window-light {
+    display: none;
+  }
+
   .intro-desktop-art {
     display: none;
   }
@@ -2259,7 +2468,7 @@ button:focus-visible {
     left: var(--shelf-left-extension, 0);
     height: 18px;
     border-top: 3px solid #674e3e;
-    background: rgba(80, 57, 43, 0.2);
+    background: #21140b;
     box-shadow: 0 8px 12px rgba(0, 0, 0, 0.25);
   }
 
@@ -2283,11 +2492,10 @@ button:focus-visible {
     left: 0;
     display: flex;
     width: 100%;
-    height: min(523px, calc(100dvh - 160px));
+    height: min(523px, calc(100dvh - 16px));
     box-sizing: border-box;
     flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     transform: translateY(104%) scale(0.985);
     transform-style: flat;
     border: 4px solid #dfba8b;
@@ -2302,10 +2510,6 @@ button:focus-visible {
   .book-spine:hover,
   .book-spine:focus-visible {
     transform: translateY(-6px);
-  }
-
-  .popup-window-light {
-    display: none;
   }
 
   .open-book::-webkit-scrollbar {
@@ -2419,8 +2623,10 @@ button:focus-visible {
   .popup-copy {
     position: relative;
     inset: auto;
-    display: block;
+    display: flex;
     height: 100%;
+    min-height: 0;
+    flex-direction: column;
     padding: 20px 20px 82px;
     color: #8f6348;
     text-align: left;
@@ -2446,7 +2652,7 @@ button:focus-visible {
     filter: blur(1px);
   }
 
-  .popup-title {
+.popup-title {
     position: relative;
     z-index: 1;
     margin: 0;
@@ -2456,8 +2662,10 @@ button:focus-visible {
     color: transparent;
     font-size: 28px;
     line-height: normal;
-    text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
-  }
+  overflow: hidden;
+  text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
+  white-space: nowrap;
+}
 
   .popup-divider {
     display: none;
@@ -2465,12 +2673,24 @@ button:focus-visible {
 
   .popup-description {
     display: -webkit-box;
+    min-height: 0;
+    flex: 0 1 auto;
     max-width: none;
+    max-height: 6.4em;
     margin: 16px 0 0;
+    padding-right: 0;
+    overflow: hidden;
     color: #8f6348;
     font: 15px/1.6 "Gowun Dodum", sans-serif;
+    text-overflow: ellipsis;
     text-shadow: 0 0 4px rgba(143, 99, 72, 0.25);
-    -webkit-line-clamp: 2;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+
+  .popup-description::-webkit-scrollbar {
+    display: none;
   }
 
   .open-story-button {
@@ -2666,7 +2886,7 @@ button:focus-visible {
     flex: 0 1 auto;
     width: 100%;
     max-width: none;
-    max-height: min(18dvh, 136px);
+    max-height: 6.4em;
     margin: 0;
     padding-right: 6px;
     overflow-x: hidden;
@@ -2745,7 +2965,7 @@ button:focus-visible {
 
   .detail-view.landscape-mode .detail-hero,
   .detail-view.landscape-mode .bubble-container {
-    top: calc(50% + 21px);
+    top: calc(42px + (100dvh - 42px) / 2);
     left: 50%;
     width: min(100vw, calc((100dvh - 42px) * 16 / 9));
     height: auto;
@@ -2834,13 +3054,18 @@ body.detail-landscape {
 
 .detail-view.landscape-mode .detail-hero,
 .detail-view.landscape-mode .bubble-container {
-  top: calc(50% + 21px);
+  top: calc(42px + (100dvh - 42px) / 2);
   left: 50%;
   width: min(100vw, calc((100dvh - 42px) * 16 / 9));
   height: auto;
   max-height: calc(100dvh - 42px);
   aspect-ratio: 16 / 9;
   transform: translate(-50%, -50%);
+}
+
+.detail-view.landscape-mode .detail-hero-image {
+  object-fit: contain;
+  object-position: 50% 50%;
 }
 
 .detail-view.landscape-mode .detail-hero {
