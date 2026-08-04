@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  await initializeSurangData({ allowLocalSeed: false });
   const views = {
     intro: document.getElementById('view-intro'),
     bookshelf: document.getElementById('view-bookshelf'),
@@ -8,6 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modal = document.getElementById('popup-modal');
   const toast = document.getElementById('app-toast');
   const detailView = views.detail;
+  const introBook = document.querySelector('.intro-book');
+  const introMobileStage = document.querySelector('.intro-mobile-stage');
   const bgmAudio = document.getElementById('site-bgm-audio');
   const bgmWidgets = [...document.querySelectorAll('.site-bgm-widget')];
   const booksPerShelf = 5;
@@ -17,6 +18,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   let toastTimer = null;
   let viewTransitionTimer = null;
   let bgmObjectUrl = '';
+  let bgmName = '';
+  let bgmUpdatedAt = 0;
+  let bgmLoadSequence = 0;
+  let bgmPlayRequested = true;
+  let bgmAutoplayPending = false;
+
+  function updateIntroBookScale() {
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const mobile = viewportWidth < viewportHeight;
+    const designWidth = mobile ? 390 : 1440;
+    const designHeight = mobile ? 844 : 900;
+    const scale = Math.min(viewportWidth / designWidth, viewportHeight / designHeight);
+    introBook.style.setProperty('--intro-book-scale', String(scale));
+    if (mobile) {
+      const stageWidth = 390 * scale;
+      const stageHeight = 844 * scale;
+      introMobileStage.style.width = `${stageWidth}px`;
+      introMobileStage.style.height = `${stageHeight}px`;
+      const stageLeft = (viewportWidth - stageWidth) / 2;
+      introMobileStage.style.left = `${stageLeft}px`;
+      introMobileStage.style.top = `${(viewportHeight - stageHeight) / 2}px`;
+      introMobileStage.style.setProperty('--mobile-left-offset', `${-stageLeft}px`);
+      introMobileStage.style.setProperty('--mobile-right-offset', `${-(viewportWidth - stageLeft - stageWidth)}px`);
+    } else {
+      introMobileStage.removeAttribute('style');
+    }
+    views.intro.classList.add('intro-scale-ready');
+  }
+
+  updateIntroBookScale();
+  await initializeSurangData({ allowLocalSeed: false });
+
   function showView(name) {
     const nextView = views[name];
     const currentView = Object.values(views).find((element) => element.classList.contains('active'));
@@ -140,8 +174,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function startAmbientParticles() {
     const canvases = [...document.querySelectorAll('.ambient-particle-canvas')];
+    const sunBokehCanvases = [...document.querySelectorAll('.sun-bokeh-canvas')];
     const canvasStates = new WeakMap();
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const sunBokehStates = new WeakMap();
+    const motionScale = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.35 : 1;
     let previousTime = performance.now();
 
     function createMotes(width, height) {
@@ -155,19 +191,19 @@ document.addEventListener('DOMContentLoaded', async () => {
           x: Math.random() * width,
           y: Math.random() * height,
           radius: sparkle
-            ? 1 + Math.random() * 1.6
+            ? 1.5 + Math.random() * 2.4
             : bokeh
-              ? 38 + Math.random() * 72
-              : 10 + Math.random() * 30,
-          speed: sparkle ? 4 + Math.random() * 8 : bokeh ? 2 + Math.random() * 6 : 6 + Math.random() * 12,
-          drift: bokeh ? 12 + Math.random() * 34 : 8 + Math.random() * 25,
+              ? 48 + Math.random() * 88
+              : 14 + Math.random() * 38,
+          speed: sparkle ? 11 + Math.random() * 13 : bokeh ? 5 + Math.random() * 10 : 10 + Math.random() * 16,
+          drift: bokeh ? 18 + Math.random() * 44 : 12 + Math.random() * 32,
           alpha: sparkle
             ? 0.24 + Math.random() * 0.35
             : bokeh
               ? 0.05 + Math.random() * 0.1
               : 0.035 + Math.random() * 0.075,
           phase: Math.random() * Math.PI * 2,
-          twinkle: 0.8 + Math.random() * 1.8
+          twinkle: 1.2 + Math.random() * 2.2
         };
       });
     }
@@ -191,28 +227,82 @@ document.addEventListener('DOMContentLoaded', async () => {
       return state;
     }
 
+    function createSunBokeh(width, height) {
+      const count = width < 768 ? 5 : 7;
+      const minimumRadius = Math.min(width, height) * (width < 768 ? 0.2 : 0.18);
+      return Array.from({ length: count }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: minimumRadius * (1 + Math.random() * 1.15),
+        driftX: 22 + Math.random() * 58,
+        driftY: 14 + Math.random() * 38,
+        phase: Math.random() * Math.PI * 2,
+        pace: 0.000045 + Math.random() * 0.00004
+      }));
+    }
+
+    function prepareSunBokehCanvas(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return null;
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      let state = sunBokehStates.get(canvas);
+      if (!state || state.width !== rect.width || state.height !== rect.height || state.ratio !== ratio) {
+        canvas.width = Math.round(rect.width * ratio);
+        canvas.height = Math.round(rect.height * ratio);
+        state = {
+          width: rect.width,
+          height: rect.height,
+          ratio,
+          bokeh: createSunBokeh(rect.width, rect.height)
+        };
+        sunBokehStates.set(canvas, state);
+      }
+      return state;
+    }
+
+    function drawSunBokeh(canvas, state, time) {
+      const context = canvas.getContext('2d');
+      context.setTransform(state.ratio, 0, 0, state.ratio, 0, 0);
+      context.clearRect(0, 0, state.width, state.height);
+
+      state.bokeh.forEach((bokeh) => {
+        const motionTime = time * bokeh.pace * motionScale;
+        const x = bokeh.x + Math.sin(motionTime + bokeh.phase) * bokeh.driftX;
+        const y = bokeh.y + Math.cos(motionTime * 0.78 + bokeh.phase) * bokeh.driftY;
+        const pulse = 0.72 + Math.sin(motionTime * 1.35 + bokeh.phase) * 0.18;
+        const radius = bokeh.radius * (0.96 + pulse * 0.08);
+        const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+        gradient.addColorStop(0, `rgba(255, 176, 91, ${0.82 * pulse})`);
+        gradient.addColorStop(0.28, `rgba(255, 145, 61, ${0.48 * pulse})`);
+        gradient.addColorStop(0.7, `rgba(241, 103, 35, ${0.12 * pulse})`);
+        gradient.addColorStop(1, 'rgba(226, 83, 24, 0)');
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+      });
+    }
+
     function drawCanvas(canvas, state, time, delta) {
       const context = canvas.getContext('2d');
       context.setTransform(state.ratio, 0, 0, state.ratio, 0, 0);
       context.clearRect(0, 0, state.width, state.height);
 
       state.motes.forEach((mote) => {
-        if (!reducedMotion) {
-          mote.y -= mote.speed * delta;
-          if (mote.y < -mote.radius * 2) {
-            mote.y = state.height + mote.radius * 2;
-            mote.x = Math.random() * state.width;
-          }
+        mote.y -= mote.speed * delta * motionScale;
+        if (mote.y < -mote.radius * 2) {
+          mote.y = state.height + mote.radius * 2;
+          mote.x = Math.random() * state.width;
         }
-        const x = mote.x + Math.sin(time * 0.00035 + mote.phase) * mote.drift;
+        const x = mote.x + Math.sin(time * 0.00035 + mote.phase) * mote.drift * motionScale;
         const pulse = 0.62 + Math.sin(time * 0.001 * mote.twinkle + mote.phase) * 0.38;
 
         if (mote.sparkle) {
-          const length = 3 + mote.radius * 2.4;
+          const length = 4 + mote.radius * 2.8;
           context.save();
           context.translate(x, mote.y);
           context.strokeStyle = `rgba(255, 240, 205, ${mote.alpha * pulse})`;
-          context.lineWidth = 0.8;
+          context.lineWidth = 1.1;
           context.beginPath();
           context.moveTo(-length, 0);
           context.lineTo(length, 0);
@@ -255,6 +345,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       canvases.forEach((canvas) => {
         const state = prepareCanvas(canvas);
         if (state) drawCanvas(canvas, state, time, delta);
+      });
+      sunBokehCanvases.forEach((canvas) => {
+        const state = prepareSunBokehCanvas(canvas);
+        if (state) drawSunBokeh(canvas, state, time);
       });
       requestAnimationFrame(animate);
     }
@@ -415,24 +509,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function tryPlayBgm() {
     if (!bgmAudio.src) {
+      bgmAutoplayPending = false;
       updateBgmWidgets();
       return false;
     }
     try {
       await bgmAudio.play();
+      bgmAutoplayPending = false;
       return true;
     } catch (error) {
+      bgmAutoplayPending = bgmPlayRequested;
       updateBgmWidgets();
       return false;
     }
   }
 
-  async function loadHomepageBgm() {
+  async function loadHomepageBgm(settings = null) {
+    const nextName = String(settings?.bgmName || '');
+    const nextUpdatedAt = Number(settings?.bgmUpdatedAt) || 0;
+    if (settings && nextName === bgmName && nextUpdatedAt === bgmUpdatedAt) return;
+
+    const sequence = ++bgmLoadSequence;
     try {
       const bgm = await getHomepageBgm();
+      if (sequence !== bgmLoadSequence) return;
+
+      const loadedName = String(bgm.bgmName || '');
+      const loadedUpdatedAt = Number(bgm.bgmUpdatedAt) || 0;
+      if (bgmAudio.src && loadedName === bgmName && loadedUpdatedAt === bgmUpdatedAt) return;
+
       if (bgmObjectUrl) URL.revokeObjectURL(bgmObjectUrl);
       bgmObjectUrl = '';
+      bgmName = loadedName;
+      bgmUpdatedAt = loadedUpdatedAt;
       if (!bgm.blob) {
+        bgmAutoplayPending = false;
         bgmAudio.removeAttribute('src');
         bgmAudio.load();
         updateBgmWidgets();
@@ -442,7 +553,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       bgmAudio.src = bgmObjectUrl;
       bgmAudio.loop = true;
       bgmAudio.load();
-      await tryPlayBgm();
+      if (bgmPlayRequested) await tryPlayBgm();
+      else updateBgmWidgets();
     } catch (error) {
       console.warn('홈페이지 BGM을 불러오지 못했습니다.', error);
       updateBgmWidgets();
@@ -474,20 +586,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast('관리자 페이지에서 홈페이지 BGM을 등록해 주세요.');
         return;
       }
-      if (bgmAudio.paused) await tryPlayBgm();
-      else bgmAudio.pause();
+      if (bgmAudio.paused) {
+        bgmPlayRequested = true;
+        await tryPlayBgm();
+      } else {
+        bgmPlayRequested = false;
+        bgmAutoplayPending = false;
+        bgmAudio.pause();
+      }
     });
   });
   bgmAudio.addEventListener('play', updateBgmWidgets);
   bgmAudio.addEventListener('pause', updateBgmWidgets);
   bgmAudio.addEventListener('error', updateBgmWidgets);
-  document.addEventListener('pointerdown', () => {
-    if (bgmAudio.paused) tryPlayBgm();
-  }, { once: true });
+  function retryBlockedAutoplay(event) {
+    if (event?.target?.closest?.('.site-bgm-widget')) return;
+    if (bgmAutoplayPending && bgmPlayRequested && bgmAudio.paused) tryPlayBgm();
+  }
+
+  document.addEventListener('pointerdown', retryBlockedAutoplay);
+  document.addEventListener('keydown', retryBlockedAutoplay);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && bgmPlayRequested && bgmAudio.paused) tryPlayBgm();
+  });
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement && detailLandscape) setDetailLandscape(false, { exitFullscreen: false });
   });
-  window.addEventListener('resize', updateBubbleLayout);
+  window.addEventListener('resize', () => {
+    updateIntroBookScale();
+    updateBubbleLayout();
+  });
   document.getElementById('detail-bg-img').addEventListener('load', updateBubbleLayout);
   const detailResizeObserver = new ResizeObserver(updateBubbleLayout);
   detailResizeObserver.observe(document.querySelector('.detail-hero'));

@@ -53,6 +53,7 @@ button:focus-visible {
   height: 100dvh;
   min-height: 100dvh;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .view-section.active {
@@ -125,6 +126,7 @@ button:focus-visible {
   background: linear-gradient(225deg, #ffe3ae 30.425%, rgba(255, 220, 125, 0) 69.083%);
   mix-blend-mode: soft-light;
   opacity: 0.4;
+  display: none;
 }
 
 .intro-bg,
@@ -150,23 +152,19 @@ button:focus-visible {
   mix-blend-mode: soft-light;
 }
 
-/* The SVG already contains Figma's shadow filter. Let its filter region paint
-   beyond the image box instead of clipping the circular lace at its edges. */
+.intro-bg-composite {
+  height: 106.667%;
+  object-fit: fill;
+  opacity: 1;
+  mix-blend-mode: normal;
+}
+
+/* Generate the lace shadow outside the replaced SVG image so the export's
+   internal viewport cannot clip the blur. */
 .intro-pc-doily,
 .intro-mobile-doily {
   overflow: visible;
-}
-
-.intro-mobile-bg-photo {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.4;
-  mix-blend-mode: multiply;
-  pointer-events: none;
+  filter: drop-shadow(0 4px 15.1px rgba(0, 0, 0, 0.75));
 }
 
 .intro-decor {
@@ -194,18 +192,38 @@ button:focus-visible {
   display: none;
 }
 
+.intro-mobile-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  width: 390px;
+  height: 844px;
+  pointer-events: none;
+}
+
+.intro-book,
+.intro-mobile-stage {
+  visibility: hidden;
+}
+
+.intro-view.intro-scale-ready .intro-book,
+.intro-view.intro-scale-ready .intro-mobile-stage {
+  visibility: visible;
+}
+
 .intro-pc-doily { top: -14.778%; left: 21.667%; width: 62.917%; height: 100.667%; }
 .intro-pc-deco-left { top: 15.307%; left: 18.164%; width: 24.749%; height: 67.517%; transform: rotate(-19.02deg); }
 .intro-pc-deco-right { top: 47.578%; left: 57.264%; width: 19.306%; height: 52.667%; transform: rotate(73.62deg); }
 .intro-pc-letter-left { top: 10.402%; left: -15.192%; width: 37.5%; height: 72.889%; transform: rotate(-147.6deg); }
 .intro-pc-letter-right { top: 10.667%; left: 64.236%; width: 37.5%; height: 72.889%; }
-.intro-pc-keyboard { top: -1px; right: -1px; left: auto; width: 34.028%; height: 21.444%; }
+.intro-pc-keyboard { top: -10px; right: -12px; left: auto; width: 34.028%; height: 21.444%; }
 .intro-pc-watch { top: 26.444%; left: 3.681%; width: 22.431%; height: 43.889%; }
 .intro-pc-rose { top: -10.667%; left: -4.722%; width: 33.125%; height: 46.778%; }
 .intro-pc-tulip { top: 32.171%; left: 58.974%; width: 30.116%; height: 72.963%; transform: rotate(5.68deg); }
 .intro-pc-book-mini { top: 44.333%; left: -1.389%; width: 18.819%; height: 46.667%; }
 .intro-pc-book { top: 70.333%; bottom: auto; left: -16.736%; width: 49.444%; height: 65.778%; }
-.intro-pc-apple { top: 59.222%; bottom: auto; left: 68.472%; width: 48.264%; height: 75%; }
+.intro-pc-apple { top: 64.222%; bottom: auto; left: 68.472%; width: 48.264%; height: 75%; }
 .intro-pc-window { z-index: 12; top: -10.222%; left: 43.819%; width: 63.194%; height: 81%; mix-blend-mode: plus-lighter; }
 /* Keep the exported butterfly at its Figma-native 148 × 140 size. */
 .intro-pc-butterfly { z-index: 13; top: 4.444%; left: calc(50% - 322px); width: 148px; height: 140px; }
@@ -231,8 +249,22 @@ button:focus-visible {
 
 .intro-particle-canvas {
   z-index: 14;
-  opacity: 0.78;
-  mix-blend-mode: screen;
+  opacity: 0.9;
+  mix-blend-mode: color-dodge;
+}
+
+/* A restrained warm haze that reads as sunlight rather than foreground dust.
+   Canvas opacity is capped below 10%; the canvas renderer supplies the soft
+   falloff while CSS performs the requested color-dodge compositing. */
+.sun-bokeh-canvas {
+  position: absolute;
+  z-index: 9;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.08;
+  mix-blend-mode: color-dodge;
+  pointer-events: none;
 }
 
 .intro-cover-frame {
@@ -265,7 +297,7 @@ button:focus-visible {
 .intro-pc-tulip { left: 61.974%; }
 .intro-pc-letter-right { left: 67.236%; }
 .intro-pc-apple { left: 68.472%; }
-.intro-pc-keyboard { right: -1px; left: auto; }
+.intro-pc-keyboard { right: -12px; left: auto; }
 
 .ambient-photo {
   position: absolute;
@@ -347,8 +379,8 @@ button:focus-visible {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.78;
-  mix-blend-mode: screen;
+  opacity: 0.9;
+  mix-blend-mode: color-dodge;
   pointer-events: none;
 }
 
@@ -434,12 +466,20 @@ button:focus-visible {
   /* Figma 99:11: x 462, y 115, 517 × 675 within the 1440 × 900 frame. */
   top: calc(50% + 2.5px);
   left: calc(50% + 0.5px);
-  /* One uniform Figma-frame scale: min(viewport ÷ 1440, viewport ÷ 900). */
-  width: min(35.903vw, 57.444dvh);
-  height: auto;
-  aspect-ratio: 517 / 675;
-  padding: min(2.222vw, 3.556dvh);
-  transform: translate(-50%, -50%);
+  width: 517px;
+  height: 675px;
+  transform: translate(-50%, -50%) scale(var(--intro-book-scale, 1));
+  transform-origin: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.intro-book-canvas {
+  position: relative;
+  width: 517px;
+  height: 675px;
+  padding: 32px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -507,12 +547,12 @@ button:focus-visible {
 .school-emblem {
   position: absolute;
   z-index: 0;
-  top: calc(50% - 84px);
-  left: 50%;
+  top: calc(50% - 83.5px);
+  left: calc(50% + 8.5px);
   width: 236px;
   height: 262px;
   transform: translate(-50%, -50%);
-  object-fit: contain;
+  object-fit: cover;
   opacity: 0.1;
   pointer-events: none;
 }
@@ -530,7 +570,7 @@ button:focus-visible {
 
 .intro-edition {
   margin: 0;
-  color: #9a8464;
+  color: #dbb989;
   font: 18px/1 "Fredericka the Great", serif;
   letter-spacing: 0.14em;
 }
@@ -546,10 +586,11 @@ button:focus-visible {
 .desktop-title-logo {
   position: absolute;
   top: -6px;
-  left: 0;
+  left: 50%;
   display: block;
-  width: 416px;
+  width: 373px;
   height: 162px;
+  transform: translateX(-50%);
   object-fit: fill;
 }
 
@@ -591,9 +632,11 @@ button:focus-visible {
   height: 20px;
   margin: -8px 0 0;
   padding: 1px 10px;
-  background: rgba(184, 162, 136, 0.5);
+  border-radius: 4px;
+  background: #a8794c;
   color: #412514;
   font: 16px/18px "Marcellus SC", serif;
+  text-shadow: 0 0 4px rgba(65, 37, 20, 0.5);
   white-space: nowrap;
 }
 
@@ -639,8 +682,8 @@ button:focus-visible {
 
 .intro-school {
   margin: -12px 0 0;
-  color: #615045;
-  font: 12px/normal "Instrument Sans", sans-serif;
+  color: #8c6b56;
+  font: 12px/normal "Inknut Antiqua", serif;
   letter-spacing: 0;
 }
 
@@ -1521,12 +1564,16 @@ button:focus-visible {
 
 /* Figma provides a separate mobile composition. Use it for narrow portrait
    windows too, even when their CSS width exceeds the phone breakpoint. */
-@media (max-width: 767px), (max-aspect-ratio: 3 / 4) {
+@media (max-aspect-ratio: 999 / 1000) {
   .intro-desktop-art {
     display: none;
   }
 
   .intro-mobile-art {
+    display: block;
+  }
+
+  .intro-mobile-stage {
     display: block;
   }
 
@@ -1547,6 +1594,7 @@ button:focus-visible {
   }
 
   .intro-view::before {
+    display: block;
     top: 0;
     right: auto;
     bottom: auto;
@@ -1567,7 +1615,10 @@ button:focus-visible {
     pointer-events: none;
   }
 
-  .intro-mobile-doily { top: 3.791%; left: -4.615%; width: 167.436%; height: 77.37%; }
+  /* The Figma vector begins 10.38px above its 653px export frame. The SVG
+     viewBox includes that missing edge; offset the element by the same 11px
+     so the complete lace keeps its original Figma position and scale. */
+  .intro-mobile-doily { top: 2.488%; left: -4.615%; width: 167.436%; height: 77.37%; }
   .intro-mobile-deco-left { top: 15.376%; left: -18.735%; width: 52.132%; height: 41.074%; transform: rotate(128.15deg); }
   .intro-mobile-deco-right { top: 58.704%; left: 56.282%; width: 43.59%; height: 34.343%; transform: rotate(68.62deg); }
   .intro-mobile-letter-left { top: 28.924%; left: -65.38%; width: 102.504%; height: 57.54%; transform: rotate(-146.47deg); }
@@ -1579,6 +1630,13 @@ button:focus-visible {
   .intro-mobile-book { top: 81.635%; bottom: auto; left: -46.923%; width: 93.846%; height: 36.019%; }
   .intro-mobile-apple { top: 78.91%; bottom: auto; left: 32.564%; width: 92.564%; height: 41.588%; }
   .intro-mobile-window { z-index: 12; top: 0.474%; left: 28.974%; width: 114.359%; height: 52.844%; mix-blend-mode: plus-lighter; }
+
+  /* On near-square mobile views, anchor the edge decorations to the actual
+     viewport instead of the narrower centered 390 × 844 design stage. */
+  .intro-mobile-rose { left: calc(var(--mobile-left-offset, 0px) - 15.385%); }
+  .intro-mobile-letter-left { left: calc(var(--mobile-left-offset, 0px) - 65.38%); }
+  .intro-mobile-book { left: calc(var(--mobile-left-offset, 0px) - 46.923%); }
+  .intro-mobile-watch { left: calc(var(--mobile-left-offset, 0px) - 15.641%); }
 
   /* Latest mobile book-cover-container overlay: centered 300 × 513 layer. */
   .intro-cover-overlay.intro-mobile-art {
@@ -1594,20 +1652,27 @@ button:focus-visible {
   .intro-mobile-deco-right { left: 60%; }
   .intro-mobile-tulip { left: 60%; }
   .intro-mobile-letter-right { left: 28.128%; }
-  .intro-mobile-apple { left: 32.564%; }
-  .intro-mobile-keyboard { right: -5.641%; left: auto; }
+  /* Push the exports far enough right that their hard image bounds remain
+     outside the visible mobile composition on near-square viewports. */
+  .intro-mobile-letter-right { right: calc(var(--mobile-right-offset, 0px) - 22.487%); left: auto; }
+  .intro-mobile-apple { right: calc(var(--mobile-right-offset, 0px) - 33.846%); left: auto; }
+  .intro-mobile-keyboard { right: calc(var(--mobile-right-offset, 0px) - 11.282%); left: auto; }
 
   .intro-book {
     /* Figma 103:105: x 45, y 223, 300 × 397 within the 390 × 844 frame. */
     top: 50%;
     left: 50%;
-    /* One uniform Figma-mobile-frame scale: min(viewport ÷ 390, viewport ÷ 844). */
-    width: min(76.923vw, 35.545dvh);
-    height: auto;
-    aspect-ratio: 300 / 397;
-    padding: min(4.103vw, 1.896dvh);
+    width: 300px;
+    height: 397px;
     box-shadow: none;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(var(--intro-book-scale, 1));
+  }
+
+  .intro-book-canvas {
+    width: 300px;
+    height: 397px;
+    padding: 16px;
+    box-shadow: none;
   }
 
   .intro-book-inner {
@@ -1711,10 +1776,8 @@ button:focus-visible {
   }
 
   .intro-book {
-    width: min(76.923vw, 35.545dvh);
-    height: auto;
-    aspect-ratio: 300 / 397;
-    padding: min(4.103vw, 1.896dvh);
+    width: 300px;
+    height: 397px;
     background: transparent;
     box-shadow: none;
   }
@@ -1747,10 +1810,11 @@ button:focus-visible {
   }
 
   .school-emblem {
-    top: calc(50% - 83.5px);
-    width: 236px;
-    height: 262px;
-    transform: translateX(-50%);
+    top: calc(50% - 34.5px);
+    left: calc(50% + 4.5px);
+    width: 189px;
+    height: 210px;
+    transform: translate(-50%, -50%);
   }
 
   .intro-edition {
@@ -1774,10 +1838,14 @@ button:focus-visible {
   }
 
   .mobile-title-logo {
+    position: absolute;
+    top: -3.5px;
+    left: 50%;
     display: block;
-    width: 154px;
-    height: 90px;
-    object-fit: contain;
+    width: 207px;
+    height: 97px;
+    transform: translateX(-50%);
+    object-fit: fill;
   }
 
   .intro-subtitle {
@@ -1790,6 +1858,7 @@ button:focus-visible {
     font-size: 10.308px;
     line-height: 20px;
     letter-spacing: 0;
+    text-shadow: 0 0 2.577px rgba(65, 37, 20, 0.5);
   }
 
   .mobile-intro-divider {
@@ -1821,7 +1890,7 @@ button:focus-visible {
 
   .intro-school {
     margin: 0;
-    color: #615045;
+    color: #8c6b56;
     font: 8px/normal "Inknut Antiqua", serif;
     letter-spacing: 0;
   }
@@ -2636,12 +2705,20 @@ body.detail-landscape {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:focus-within {
     scroll-behavior: auto !important;
+  }
+
+  .view-section,
+  .modal-overlay,
+  .open-book,
+  .detail-ui-layer,
+  .app-toast {
     transition-duration: 0.01ms !important;
+  }
+
+  .view-entering,
+  .view-leaving {
     animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
   }
 }
