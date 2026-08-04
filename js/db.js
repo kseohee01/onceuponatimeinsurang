@@ -177,6 +177,7 @@ function normalizeBook(book, index = 0) {
   const source = book && typeof book === 'object' ? book : {};
   const title = cleanText(source.title, '제목 없는 이야기');
   const sourceSpineHeight = Number(source.spineHeight);
+  const sourceSpineWidth = Number(source.spineWidth);
   const shouldApplyHeightPattern =
     !Number.isFinite(sourceSpineHeight) ||
     (source.spineHeightPatternVersion === undefined && sourceSpineHeight === 230);
@@ -205,8 +206,11 @@ function normalizeBook(book, index = 0) {
       : '#6D4F3D',
     spineHeight: shouldApplyHeightPattern
       ? getAutomaticSpineHeight(index)
-      : Math.max(190, Math.min(270, sourceSpineHeight)),
+      : Math.max(120, Math.min(270, sourceSpineHeight)),
     spineHeightPatternVersion: 1,
+    spineWidth: Number.isFinite(sourceSpineWidth)
+      ? Math.max(30, Math.min(120, sourceSpineWidth))
+      : 60,
     spineImage: typeof source.spineImage === 'string' ? source.spineImage : '',
     coverImage: typeof source.coverImage === 'string' ? source.coverImage : '',
     detailBgImage: typeof source.detailBgImage === 'string' ? source.detailBgImage : '',

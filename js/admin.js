@@ -278,6 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     field('book-spine-color').value = book.spineColor || '#6d4f3d';
     field('book-spine-color-text').value = (book.spineColor || '#6D4F3D').toUpperCase();
     field('book-spine-height').value = book.spineHeight || 230;
+    field('book-spine-width').value = book.spineWidth || 60;
     characters = [...(book.participatingCharacters || [])];
     spineImage = book.spineImage || '';
     coverImage = book.coverImage || '';
@@ -298,6 +299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     field('book-spine-color').value = '#6d4f3d';
     field('book-spine-color-text').value = '#6D4F3D';
     field('book-spine-height').value = getAutomaticSpineHeight(getBooks().length);
+    field('book-spine-width').value = 60;
     characters = [];
     spineImage = '';
     coverImage = '';
@@ -386,6 +388,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       participatingCharacters: characters,
       spineColor: field('book-spine-color').value,
       spineHeight: Number(field('book-spine-height').value) || getAutomaticSpineHeight(getBooks().length),
+      spineWidth: Number(field('book-spine-width').value) || 60,
       status: existing?.status || 'active',
       spineImage: pendingBookAssets.spineImage || spineImage,
       coverImage: pendingBookAssets.coverImage || coverImage,

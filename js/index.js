@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const detailView = views.detail;
   const introBook = document.querySelector('.intro-book');
   const introMobileStage = document.querySelector('.intro-mobile-stage');
+  const shelfLayoutStage = document.querySelector('.shelf-layout-stage');
   const bgmAudio = document.getElementById('site-bgm-audio');
   const bgmWidgets = [...document.querySelectorAll('.site-bgm-widget')];
   const booksPerShelf = 5;
@@ -23,6 +24,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bgmLoadSequence = 0;
   let bgmPlayRequested = true;
   let bgmAutoplayPending = false;
+  let detailRenderSequence = 0;
+  const detailImagePreloads = new Map();
 
   function updateIntroBookScale() {
     const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
@@ -45,10 +48,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       introMobileStage.removeAttribute('style');
     }
+    shelfLayoutStage.style.setProperty('--shelf-stage-scale', String(scale));
+    const shelfStageWidth = designWidth * scale;
+    const siteFrameWidth = mobile
+      ? viewportWidth
+      : Math.min(viewportWidth, viewportHeight * 16 / 9);
+    const shelfSideExtension = Math.max(0, (siteFrameWidth - shelfStageWidth) / 2 / scale);
+    shelfLayoutStage.style.setProperty('--shelf-left-extension', `${-shelfSideExtension}px`);
+    shelfLayoutStage.style.setProperty('--shelf-right-extension', `${-shelfSideExtension}px`);
     views.intro.classList.add('intro-scale-ready');
+    views.bookshelf.classList.add('shelf-scale-ready');
+  }
+
+  function updatePopupScale() {
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    if (viewportWidth < viewportHeight) {
+      modal.style.removeProperty('--popup-scale');
+      return;
+    }
+    const siteFrameWidth = Math.min(viewportWidth, viewportHeight * 16 / 9);
+    const availableWidth = Math.max(1, siteFrameWidth - 40);
+    const availableHeight = Math.max(1, viewportHeight - 40);
+    const popupScale = Math.min(1, availableWidth / 920, availableHeight / 620);
+    modal.style.setProperty('--popup-scale', String(popupScale));
   }
 
   updateIntroBookScale();
+  updatePopupScale();
   await initializeSurangData({ allowLocalSeed: false });
 
   function showView(name) {
@@ -77,7 +104,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       viewTransitionTimer = window.setTimeout(() => nextView.classList.remove('view-entering'), 660);
     }
     document.body.dataset.view = name;
-    if (name === 'bookshelf') renderBookshelf();
+    if (name === 'bookshelf') {
+      views.bookshelf.classList.remove('shelf-animating');
+      renderBookshelf();
+      void views.bookshelf.offsetWidth;
+      views.bookshelf.classList.add('shelf-animating');
+    }
+    if (name === 'detail') {
+      views.detail.classList.remove('detail-animating');
+      void views.detail.offsetWidth;
+      views.detail.classList.add('detail-animating');
+    }
   }
 
   function showToast(message) {
@@ -98,16 +135,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     button.type = 'button';
     button.className = 'book-spine';
     const visualHeight = Math.max(
-      190,
+      120,
       Math.min(270, Number(book.spineHeight) || getAutomaticSpineHeight(visualIndex))
     );
-    const mobileVisualHeight = Math.round(170 + ((visualHeight - 190) / 80) * 30);
+    const visualWidth = Math.max(30, Math.min(120, Number(book.spineWidth) || 60));
     button.style.setProperty('--spine-height', `${visualHeight}px`);
-    button.style.setProperty('--mobile-spine-height', `${mobileVisualHeight}px`);
+    button.style.setProperty('--spine-width', `${visualWidth}px`);
+    button.style.setProperty('--mobile-spine-width', `${Math.round(visualWidth * 5 / 6)}px`);
+    const bookRowIndex = Math.floor(visualIndex / booksPerShelf);
+    const bookColumnIndex = visualIndex % booksPerShelf;
+    button.style.setProperty('--shelf-book-delay', `${90 + bookRowIndex * 140 + bookColumnIndex * 45}ms`);
     button.style.setProperty('--spine-color', book.spineColor || '#6d4f3d');
     if (book.spineImage) {
-      button.style.backgroundImage = `linear-gradient(90deg, rgba(255,255,255,.08), transparent 12%, transparent 84%, rgba(0,0,0,.25)), url("${book.spineImage}")`;
-      button.style.backgroundSize = 'auto, cover';
+      button.style.backgroundImage = `url("${book.spineImage}")`;
+      button.style.backgroundSize = 'cover';
       button.style.backgroundPosition = 'center';
     }
     button.setAttribute('aria-label', `${book.title} 열기`);
@@ -120,10 +161,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shelves = document.getElementById('shelves-list');
     const shelfCount = Math.max(3, Math.ceil(books.length / booksPerShelf));
     shelves.replaceChildren();
+    shelves.parentElement.classList.toggle('is-scrollable', shelfCount > 3);
 
     for (let shelfIndex = 0; shelfIndex < shelfCount; shelfIndex += 1) {
       const row = document.createElement('div');
       row.className = 'shelf-row';
+      row.style.setProperty('--shelf-row-delay', `${shelfIndex * 140}ms`);
+      row.style.setProperty('--shelf-beam-delay', `${70 + shelfIndex * 140}ms`);
       const booksRow = document.createElement('div');
       booksRow.className = 'books-row';
       const start = shelfIndex * booksPerShelf;
@@ -153,12 +197,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('popup-book-title').textContent = book.title;
     document.getElementById('popup-book-desc').textContent =
       book.description || `${book.title}의 인물들이 수랑고에서 만나 새롭게 써 내려가는 이야기입니다.`;
+    preloadDetailImage(book.detailBgImage || FIGMA_DETAIL);
+    updatePopupScale();
     modal.classList.add('open');
     document.getElementById('btn-close-popup').focus();
   }
 
-  function closeBook() {
+  function closeBook({ animate = false } = {}) {
+    if (!modal.classList.contains('open')) return;
+    if (animate) {
+      modal.classList.remove('close-immediate');
+      modal.classList.remove('open');
+      return;
+    }
+    modal.classList.add('close-immediate');
     modal.classList.remove('open');
+    requestAnimationFrame(() => modal.classList.remove('close-immediate'));
   }
 
   function rgbaFromHex(hex, opacity) {
@@ -181,31 +235,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     let previousTime = performance.now();
 
     function createMotes(width, height) {
-      const count = width < 768 ? 44 : 68;
-      return Array.from({ length: count }, (_, index) => {
-        const sparkle = index % 5 === 0;
-        const bokeh = !sparkle && index % 3 === 1;
-        return {
-          sparkle,
-          bokeh,
-          x: Math.random() * width,
-          y: Math.random() * height,
-          radius: sparkle
-            ? 1.5 + Math.random() * 2.4
-            : bokeh
-              ? 48 + Math.random() * 88
-              : 14 + Math.random() * 38,
-          speed: sparkle ? 11 + Math.random() * 13 : bokeh ? 5 + Math.random() * 10 : 10 + Math.random() * 16,
-          drift: bokeh ? 18 + Math.random() * 44 : 12 + Math.random() * 32,
-          alpha: sparkle
-            ? 0.24 + Math.random() * 0.35
-            : bokeh
-              ? 0.05 + Math.random() * 0.1
-              : 0.035 + Math.random() * 0.075,
-          phase: Math.random() * Math.PI * 2,
-          twinkle: 1.2 + Math.random() * 2.2
-        };
-      });
+      const count = width < 768 ? 12 : 18;
+      return Array.from({ length: count }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: 48 + Math.random() * 88,
+        speed: 5 + Math.random() * 10,
+        drift: 18 + Math.random() * 44,
+        alpha: 0.04 + Math.random() * 0.04,
+        phase: Math.random() * Math.PI * 2,
+        twinkle: 1.2 + Math.random() * 2.2
+      }));
     }
 
     function prepareCanvas(canvas) {
@@ -297,41 +337,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const x = mote.x + Math.sin(time * 0.00035 + mote.phase) * mote.drift * motionScale;
         const pulse = 0.62 + Math.sin(time * 0.001 * mote.twinkle + mote.phase) * 0.38;
 
-        if (mote.sparkle) {
-          const length = 4 + mote.radius * 2.8;
-          context.save();
-          context.translate(x, mote.y);
-          context.strokeStyle = `rgba(255, 240, 205, ${mote.alpha * pulse})`;
-          context.lineWidth = 1.1;
-          context.beginPath();
-          context.moveTo(-length, 0);
-          context.lineTo(length, 0);
-          context.moveTo(0, -length);
-          context.lineTo(0, length);
-          context.stroke();
-          context.fillStyle = `rgba(255, 250, 228, ${Math.min(0.9, mote.alpha * 1.7 * pulse)})`;
-          context.beginPath();
-          context.arc(0, 0, mote.radius, 0, Math.PI * 2);
-          context.fill();
-          context.restore();
-          return;
-        }
-
         const gradient = context.createRadialGradient(x, mote.y, 0, x, mote.y, mote.radius);
-        if (mote.bokeh) {
-          gradient.addColorStop(0, `rgba(255, 235, 202, ${mote.alpha * pulse * 0.72})`);
-          gradient.addColorStop(0.22, `rgba(255, 211, 164, ${mote.alpha * pulse * 0.34})`);
-          gradient.addColorStop(0.66, `rgba(225, 176, 132, ${mote.alpha * pulse * 0.09})`);
-          gradient.addColorStop(1, 'rgba(225, 176, 132, 0)');
-          context.fillStyle = gradient;
-          context.beginPath();
-          context.arc(x, mote.y, mote.radius, 0, Math.PI * 2);
-          context.fill();
-          return;
-        }
-        gradient.addColorStop(0, `rgba(255, 224, 196, ${mote.alpha * pulse})`);
-        gradient.addColorStop(0.42, `rgba(230, 190, 160, ${mote.alpha * 0.55 * pulse})`);
-        gradient.addColorStop(1, 'rgba(230, 190, 160, 0)');
+        gradient.addColorStop(0, `rgba(255, 235, 202, ${mote.alpha * pulse * 0.72})`);
+        gradient.addColorStop(0.22, `rgba(255, 211, 164, ${mote.alpha * pulse * 0.34})`);
+        gradient.addColorStop(0.66, `rgba(225, 176, 132, ${mote.alpha * pulse * 0.09})`);
+        gradient.addColorStop(1, 'rgba(225, 176, 132, 0)');
         context.fillStyle = gradient;
         context.beginPath();
         context.arc(x, mote.y, mote.radius, 0, Math.PI * 2);
@@ -397,9 +407,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     positionStoryBubbles();
   }
 
-  function renderDetail(book) {
+  function preloadDetailImage(source) {
+    if (detailImagePreloads.has(source)) return detailImagePreloads.get(source);
+    const preload = new Promise((resolve) => {
+      const image = new Image();
+      image.decoding = 'async';
+      image.onload = resolve;
+      image.onerror = resolve;
+      image.src = source;
+      if (image.complete) {
+        if (typeof image.decode === 'function') image.decode().then(resolve, resolve);
+        else resolve();
+      }
+    });
+    detailImagePreloads.set(source, preload);
+    return preload;
+  }
+
+  async function renderDetail(book) {
+    const renderSequence = ++detailRenderSequence;
+    const detailWasActive = views.detail.classList.contains('active');
     selectedBook = book;
     const image = book.detailBgImage || FIGMA_DETAIL;
+    await preloadDetailImage(image);
+    if (renderSequence !== detailRenderSequence || selectedBook?.id !== book.id) return;
+    if (!detailWasActive && !modal.classList.contains('open')) return;
     const detailImage = document.getElementById('detail-bg-img');
     const backdropImage = document.getElementById('detail-backdrop-img');
     detailImage.src = image;
@@ -445,7 +477,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function updateUiVisibility() {
-    document.getElementById('detail-ui-layer').classList.toggle('hidden', !uiVisible);
+    const uiLayer = document.getElementById('detail-ui-layer');
+    uiLayer.classList.toggle('hidden', !uiVisible);
+    uiLayer.inert = !uiVisible;
+    uiLayer.setAttribute('aria-hidden', String(!uiVisible));
     const toggle = document.getElementById('btn-ui-toggle');
     toggle.setAttribute('aria-pressed', String(uiVisible));
     document.getElementById('ui-toggle-switch').style.filter = uiVisible
@@ -565,7 +600,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showView('bookshelf');
   });
   document.getElementById('header-logo-home').addEventListener('click', () => showView('intro'));
-  document.getElementById('btn-close-popup').addEventListener('click', closeBook);
+  document.getElementById('btn-close-popup').addEventListener('click', () => closeBook({ animate: true }));
   document.getElementById('btn-read-more').addEventListener('click', () => {
     if (selectedBook) renderDetail(selectedBook);
   });
@@ -614,6 +649,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   window.addEventListener('resize', () => {
     updateIntroBookScale();
+    updatePopupScale();
     updateBubbleLayout();
   });
   document.getElementById('detail-bg-img').addEventListener('load', updateBubbleLayout);
