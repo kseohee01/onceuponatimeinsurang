@@ -1169,30 +1169,35 @@ tr.selected .row-actions {
   position: absolute;
   display: flex;
   width: max-content;
-  max-width: 21cqw;
-  min-height: 2.292cqw;
+  max-width: 25.2cqw;
+  min-height: 2.75cqw;
   align-items: center;
-  padding: 0.556cqw 1.111cqw;
+  padding: 0.667cqw 1.333cqw;
   border: 0;
-  border-radius: 1.389cqw;
+  border-radius: 1.667cqw;
   background: var(--bubble-background, rgba(45, 212, 191, 0.9));
-  box-shadow: 0 0.229cqw 0.743cqw rgba(0, 0, 0, 0.25);
-  color: rgba(255, 255, 255, 0.96);
+  box-shadow: none;
+  color: #ffffff;
   cursor: grab;
-  font: 500 0.972cqw/normal "Instrument Sans", sans-serif;
-  text-shadow: 0 0 0.556cqw rgba(255, 255, 255, 0.5);
+  font: 500 1.167cqw/normal "Hamlet", serif;
+  text-shadow: 0 0 0.667cqw rgba(255, 255, 255, 0.5);
   user-select: none;
-  backdrop-filter: blur(0.137cqw);
+  backdrop-filter: blur(0.164cqw);
+  filter: drop-shadow(0 0.275cqw 0.892cqw rgba(0, 0, 0, 0.25));
   isolation: isolate;
 }
 
 .preview-bubble-text {
   position: relative;
   z-index: 1;
-  background: linear-gradient(180deg, #fff, #c3c3c3);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+  background: none;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .preview-bubble:active {
@@ -1237,16 +1242,17 @@ tr.selected .row-actions {
 .preview-bubble::after {
   position: absolute;
   z-index: 0;
-  bottom: -0.651cqw;
-  width: 1.144cqw;
-  height: 0.696cqw;
+  bottom: calc(-0.835cqw + 1px);
+  width: 1.373cqw;
+  height: 0.835cqw;
   content: "";
-  background: var(--bubble-tail-background, rgba(45, 212, 191, 0.9));
+  background: var(--bubble-background, rgba(45, 212, 191, 0.9));
+  backdrop-filter: blur(0.164cqw);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 .preview-bubble.tail-L::after {
-  left: 1.528cqw;
+  left: 1.834cqw;
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
@@ -1256,7 +1262,7 @@ tr.selected .row-actions {
 }
 
 .preview-bubble.tail-R::after {
-  right: 1.25cqw;
+  right: 1.5cqw;
   clip-path: polygon(0 0, 100% 0, 100% 100%);
 }
 

@@ -1215,13 +1215,17 @@ button:focus-visible {
 .modal-overlay.closing-fade {
   visibility: visible;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 280ms ease, visibility 0s linear 280ms;
 }
 
-.modal-overlay.closing-fade .open-book,
 .modal-overlay.closing-fade .popup-page,
 .modal-overlay.closing-fade .popup-gutter {
   animation: none;
+  transition: none;
+}
+
+.modal-overlay.closing-fade .open-book {
   transition: none;
 }
 
@@ -1647,18 +1651,19 @@ button:focus-visible {
   position: absolute;
   display: flex;
   width: max-content;
-  min-height: 2.75cqw;
+  min-height: 3.3cqw;
   align-items: center;
-  max-width: 24cqw;
-  padding: 0.667cqw 1.333cqw;
+  max-width: 28.8cqw;
+  padding: 0.8cqw 1.6cqw;
   border: 0;
-  border-radius: 1.667cqw;
+  border-radius: 2cqw;
   background: var(--bubble-background, rgba(39, 39, 39, 0.5));
-  box-shadow: 0 0.229cqw 0.743cqw rgba(0, 0, 0, 0.25);
-  color: rgba(255, 255, 255, 0.96);
-  font: 500 1.167cqw/normal "Instrument Sans", sans-serif;
-  text-shadow: 0 0 0.667cqw rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(0.2cqw);
+  box-shadow: none;
+  color: #ffffff;
+  font: 500 1.4cqw/normal "Hamlet", serif;
+  text-shadow: 0 0 0.8cqw rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(0.24cqw);
+  filter: drop-shadow(0 0.275cqw 0.892cqw rgba(0, 0, 0, 0.25));
   will-change: transform;
   animation: story-bubble-float 5.4s ease-in-out infinite;
   transform-origin: center;
@@ -1668,10 +1673,14 @@ button:focus-visible {
 .story-bubble-text {
   position: relative;
   z-index: 1;
-  background: linear-gradient(180deg, #fff, #c3c3c3);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+  background: none;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .story-bubble.tail-L {
@@ -1725,16 +1734,17 @@ button:focus-visible {
 .story-bubble::after {
   position: absolute;
   z-index: 0;
-  bottom: calc(-0.833cqw + 1px);
-  width: 1.333cqw;
-  height: 0.833cqw;
+  bottom: calc(-1cqw + 1px);
+  width: 1.6cqw;
+  height: 1cqw;
   content: "";
-  background: var(--bubble-tail-background, rgba(45, 212, 191, 0.9));
+  background: var(--bubble-background, rgba(39, 39, 39, 0.5));
+  backdrop-filter: blur(0.24cqw);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 .story-bubble.tail-L::after {
-  left: 1.833cqw;
+  left: 2.2cqw;
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
@@ -1744,7 +1754,7 @@ button:focus-visible {
 }
 
 .story-bubble.tail-R::after {
-  right: 1.5cqw;
+  right: 1.8cqw;
   clip-path: polygon(0 0, 100% 0, 100% 100%);
 }
 
@@ -2679,13 +2689,13 @@ button:focus-visible {
     height: 100%;
     min-height: 0;
     flex-direction: column;
-    padding: 20px 20px 82px;
+    padding: 12px 20px 82px;
     color: #8f6348;
     text-align: left;
   }
 
   .popup-characters {
-    margin: 0 0 -8px;
+    margin: 0;
     color: #a47d65;
     font: 12px/normal "Gowun Dodum", sans-serif;
     letter-spacing: 1.5px;
@@ -2704,20 +2714,23 @@ button:focus-visible {
     filter: blur(1px);
   }
 
-.popup-title {
+  .popup-title {
     position: relative;
     z-index: 1;
+    box-sizing: border-box;
+    min-height: 42px;
     margin: 0;
+    padding-bottom: 6px;
     background: linear-gradient(0deg, #775a4a, #bc6161 104%);
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
     font-size: 28px;
-    line-height: normal;
-  overflow: hidden;
-  text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
-  white-space: nowrap;
-}
+    line-height: 1.25;
+    overflow: visible;
+    text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
+    white-space: nowrap;
+  }
 
   .popup-divider {
     display: none;
@@ -2748,7 +2761,7 @@ button:focus-visible {
   .open-story-button {
     position: absolute;
     right: 50%;
-    bottom: 30px;
+    bottom: 16px;
     width: 106px;
     height: 48px;
     min-width: 106px;

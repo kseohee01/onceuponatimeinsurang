@@ -99,10 +99,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   updatePopupScale();
   await initializeSurangData({ allowLocalSeed: false });
 
-  function showView(name) {
+  function showView(name, { instant = false } = {}) {
     const nextView = views[name];
     const currentView = Object.values(views).find((element) => element.classList.contains('active'));
-    if (currentView && currentView !== nextView) {
+    if (instant) {
+      clearTimeout(viewTransitionTimer);
+      Object.values(views).forEach((element) => {
+        element.classList.remove('active', 'view-entering', 'view-leaving', 'view-preparing');
+      });
+      nextView.classList.add('active');
+    } else if (currentView && currentView !== nextView) {
       clearTimeout(viewTransitionTimer);
       Object.values(views).forEach((element) => {
         element.classList.remove('view-entering', 'view-leaving', 'view-preparing');
@@ -164,8 +170,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       image.classList.remove('is-loaded');
       image.removeAttribute('src');
     };
-    if (nextSource) image.src = nextSource;
-    else image.removeAttribute('src');
+    if (nextSource) {
+      image.src = nextSource;
+      // A preloaded detail image can already be complete synchronously. Mark
+      // it ready in the same frame so the popup never reveals a placeholder.
+      if (image.complete && image.naturalWidth > 0) image.onload();
+    } else image.removeAttribute('src');
   }
 
   function activeBooks() {
@@ -289,21 +299,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function closeBook({ animate = false } = {}) {
     if (!modal.classList.contains('open')) return;
+    clearTimeout(popupCloseTimer);
     if (animate) {
-      clearTimeout(popupCloseTimer);
-      const popupBook = modal.querySelector('.open-book');
-      popupBook.style.transform = getComputedStyle(popupBook).transform;
       modal.classList.remove('close-immediate');
       modal.classList.add('closing-fade');
-      modal.classList.remove('open');
       popupCloseTimer = window.setTimeout(() => {
-        modal.classList.remove('closing-fade');
-        popupBook.style.removeProperty('transform');
+        modal.classList.add('close-immediate');
+        modal.classList.remove('open', 'closing-fade');
+        requestAnimationFrame(() => modal.classList.remove('close-immediate'));
       }, 300);
       return;
     }
     modal.classList.add('close-immediate');
-    modal.classList.remove('open');
+    modal.classList.remove('open', 'closing-fade');
     requestAnimationFrame(() => modal.classList.remove('close-immediate'));
   }
 
@@ -637,9 +645,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     uiVisible = true;
     updateUiVisibility();
-    closeBook();
-    showView('detail');
+    // Replace the shelf underneath the still-open popup. Keeping the popup as
+    // a visual cover prevents a shelf frame from flashing between both views.
+    showView('detail', { instant: true });
     updateBubbleLayout();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => closeBook({ animate: true }));
+    });
   }
 
   function updateUiVisibility() {
