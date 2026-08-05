@@ -249,8 +249,8 @@ button:focus-visible {
 
 .intro-particle-canvas {
   z-index: 14;
-  opacity: 0.9;
-  mix-blend-mode: color-dodge;
+  opacity: 0.68;
+  mix-blend-mode: screen;
 }
 
 /* A restrained warm haze that reads as sunlight rather than foreground dust.
@@ -379,12 +379,16 @@ button:focus-visible {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.9;
-  mix-blend-mode: color-dodge;
+  opacity: 0.62;
+  mix-blend-mode: screen;
   pointer-events: none;
 }
 
 .shelf-view .ambient-particle-canvas {
+  z-index: 3;
+}
+
+.detail-view .ambient-particle-canvas {
   z-index: 3;
 }
 
@@ -843,40 +847,36 @@ button:focus-visible {
   color: #fff0d6;
 }
 
-.shelf-layout-stage {
+.shelf-scene-stage {
   position: absolute;
-  z-index: 3;
+  z-index: 1;
   top: 50%;
   left: 50%;
   width: 1440px;
   height: 900px;
+  overflow: hidden;
   visibility: hidden;
   transform: translate(-50%, -50%) scale(var(--shelf-stage-scale, 1));
   transform-origin: center;
-  pointer-events: none;
 }
 
-.shelf-pc-bg-solid-group,
-.shelf-pc-top-dim {
+.shelf-layout-stage {
   position: absolute;
+  z-index: 3;
   inset: 0;
   pointer-events: none;
 }
 
-.shelf-pc-bg-solid-group {
-  z-index: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-}
-
 .shelf-pc-top-dim {
+  position: absolute;
   z-index: 4;
+  top: 0;
   right: 0;
   bottom: auto;
+  left: 0;
   height: 121px;
   background: linear-gradient(180deg, rgba(27, 16, 10, 0.5), rgba(27, 16, 10, 0));
+  pointer-events: none;
 }
 
 .shelf-pc-cabinet {
@@ -884,13 +884,11 @@ button:focus-visible {
   z-index: 2;
   top: 0;
   bottom: 0;
-  left: calc(50% - 2px);
-  width: 850px;
+  left: calc(50% - 3px);
+  width: 852px;
   overflow: hidden;
   background: transparent;
-  mix-blend-mode: multiply;
-  transform: translateX(-50%) scaleX(var(--shelf-stage-scale, 1));
-  transform-origin: center;
+  transform: translateX(-50%);
   pointer-events: none;
 }
 
@@ -900,7 +898,7 @@ button:focus-visible {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: cover;
 }
 
 .shelf-pc-frame {
@@ -913,44 +911,49 @@ button:focus-visible {
   width: 905px;
   height: 100%;
   object-fit: fill;
-  transform: translateX(-50%) scaleX(var(--shelf-stage-scale, 1));
-  transform-origin: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.shelf-pc-light-overlay {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: block;
+  width: auto;
+  height: auto;
+  aspect-ratio: 1440 / 900;
+  mix-blend-mode: plus-lighter;
   pointer-events: none;
 }
 
 .shelf-pc-window-light {
-  position: fixed;
-  z-index: 21;
-  top: var(--shelf-light-top, -129px);
-  left: var(--shelf-light-left, 595px);
-  display: none;
-  width: var(--shelf-light-width, 983px);
-  height: var(--shelf-light-height, 802px);
-  mix-blend-mode: plus-lighter;
-  pointer-events: none;
-}
-
-body[data-view="bookshelf"] > .shelf-pc-window-light {
+  position: absolute;
+  inset: 0;
   display: block;
-}
-
-.shelf-pc-light-overlay {
-  mix-blend-mode: plus-lighter;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
 }
 
 /* Desktop bookshelf hierarchy from the current bookshelf-main-pc frame:
    background(0) < solid frame(1) < multiplied wood photo(2) < shelves(3)
    < dim/light(4) < header(5). */
 @media (min-aspect-ratio: 1 / 1) {
+  .shelf-view {
+    background: #b6a388 url("../assets/figma/shelf-pc-bg-solid-group.png") center / cover no-repeat;
+  }
+
   .shelf-view > .rose-overlay,
-  .shelf-view > .ambient-particle-canvas,
-  .public-header > .site-bgm-widget,
   .public-header > .public-nav {
     display: none;
   }
 }
 
-.shelf-view.shelf-scale-ready .shelf-layout-stage {
+.shelf-view.shelf-scale-ready .shelf-scene-stage {
   visibility: visible;
 }
 
@@ -1037,12 +1040,12 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
 @keyframes shelf-beam-build {
   from {
     opacity: 0;
-    transform: scaleX(0.16);
+    transform: var(--wood-beam-position, translateX(0)) scaleX(0.16);
   }
 
   to {
     opacity: 1;
-    transform: scaleX(1);
+    transform: var(--wood-beam-position, translateX(0)) scaleX(1);
   }
 }
 
@@ -1093,6 +1096,15 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   transition: transform 180ms ease, border-color 180ms ease, filter 180ms ease, box-shadow 180ms ease;
 }
 
+.managed-image {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.managed-image.is-loaded {
+  opacity: 1;
+}
+
 .book-spine:hover,
 .book-spine:focus-visible {
   z-index: 2;
@@ -1107,16 +1119,19 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
 }
 
 .wood-beam {
+  --wood-beam-position: translateX(0);
   position: absolute;
-  right: 0;
+  right: -44px;
   bottom: 0;
-  left: 0;
+  left: -52px;
+  width: auto;
   height: 24px;
   border: 0;
   border-top: 3px solid #674e3e;
-  background-color: rgba(80, 57, 43, 0.2);
+  background-color: #21140b;
   box-shadow: 0 8px 12px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(2.5px);
+  transform: var(--wood-beam-position);
   overflow: hidden;
 }
 
@@ -1131,10 +1146,6 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   mix-blend-mode: soft-light;
   opacity: 0.4;
   pointer-events: none;
-}
-
-.shelf-row:first-child .wood-beam {
-  background-color: #21140b;
 }
 
 .empty-shelf-message {
@@ -1309,7 +1320,7 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   height: 511px;
   overflow: visible;
   border-radius: 164px;
-  background: transparent;
+  background: #000000;
   box-shadow: none;
 }
 
@@ -1326,6 +1337,11 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   border-radius: 164px;
   background: rgba(195, 168, 141, 0.12);
   box-shadow: inset 0 0 24px #f4ede5, inset 0 0 23px 15px rgba(244, 237, 229, 0.92);
+}
+
+.popup-cover:has(.managed-image:not(.is-loaded)) .popup-cover-shade {
+  background: transparent;
+  box-shadow: none;
 }
 
 .popup-project-label {
@@ -1508,6 +1524,7 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   opacity: 1;
   filter: blur(2.1px);
   transform: translate(-50%, -50%);
+  background: #000000;
 }
 
 .detail-backdrop img {
@@ -1516,6 +1533,10 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   height: 100%;
   object-fit: cover;
   object-position: center;
+  opacity: 0;
+}
+
+.detail-backdrop img.managed-image.is-loaded {
   opacity: 0.2;
 }
 
@@ -1529,7 +1550,7 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   overflow: hidden;
   transform: translate(-50%, -50%);
   border-radius: 8px;
-  background: #281a12;
+  background: #000000;
   box-shadow: 0 0 47.6px rgba(246, 187, 128, 0.5);
 }
 
@@ -1550,6 +1571,10 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   opacity: 1;
   mix-blend-mode: normal;
   pointer-events: none;
+}
+
+.detail-hero:has(.managed-image:not(.is-loaded)) .detail-gradient-overlay {
+  background: transparent;
 }
 
 .detail-ui-layer {
@@ -1998,15 +2023,8 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
 /* Figma provides a separate mobile composition. Use it for narrow portrait
    windows too, even when their CSS width exceeds the phone breakpoint. */
 @media (max-aspect-ratio: 999 / 1000) {
-  .shelf-pc-bg-solid-group,
-  .shelf-pc-top-dim,
-  .shelf-pc-cabinet,
   .shelf-pc-frame,
-  .shelf-pc-window-light {
-    display: none;
-  }
-
-  body[data-view="bookshelf"] > .shelf-pc-window-light {
+  .shelf-pc-light-overlay {
     display: none;
   }
 
@@ -2349,10 +2367,14 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   }
 
   .public-header .site-bgm-widget {
+    top: 50%;
+    right: 20px;
+    left: auto;
     width: 32px;
     min-width: 32px;
     height: 32px;
     padding: 0;
+    transform: translateY(-50%);
   }
 
   .public-header .site-bgm-widget > span:last-child {
@@ -2417,9 +2439,36 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
     inset: 64px 0 0;
   }
 
-  .shelf-layout-stage {
+  .shelf-scene-stage {
     width: 390px;
     height: 844px;
+    overflow: visible;
+  }
+
+  .shelf-layout-stage {
+    width: 100%;
+    height: 100%;
+  }
+
+  .shelf-pc-cabinet {
+    top: 50%;
+    bottom: auto;
+    left: 50%;
+    display: block;
+    width: max(
+      calc(844px * 852 / 900),
+      calc(100% + 2 * var(--shelf-viewport-extension, 0px) + 2px)
+    );
+    height: auto;
+    aspect-ratio: 852 / 900;
+    overflow: visible;
+    transform: translate(-50%, -50%);
+  }
+
+  .shelf-pc-cabinet img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .shelves-list {
@@ -2463,13 +2512,16 @@ body[data-view="bookshelf"] > .shelf-pc-window-light {
   }
 
   .wood-beam {
+    --wood-beam-position: translateX(0);
     right: var(--shelf-right-extension, 0);
     bottom: 0;
     left: var(--shelf-left-extension, 0);
+    width: auto;
     height: 18px;
     border-top: 3px solid #674e3e;
     background: #21140b;
     box-shadow: 0 8px 12px rgba(0, 0, 0, 0.25);
+    transform: var(--wood-beam-position);
   }
 
   .empty-shelf-message {

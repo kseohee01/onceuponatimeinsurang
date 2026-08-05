@@ -10,7 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Fredericka+the+Great&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Inknut+Antiqua:wght@400&family=Instrument+Sans:wght@400;500;600&family=Marcellus+SC&family=Nanum+Myeongjo:wght@400;700;800&family=Rochester&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/index.css?v=58">
+  <!-- Cute Spinning Flower Tan cursor by Cursors-4U. -->
+  <link rel="stylesheet" href="https://cdn.cursors-4u.net/cursors/animated/cute-spinning-flower-tan-517a3242-32.css">
+  <link rel="stylesheet" href="css/index.css?v=71">
 </head>
 <body data-color-mode="fixed-light">
   <audio id="site-bgm-audio" loop autoplay preload="auto"></audio>
@@ -84,12 +86,12 @@
   </section>
 
   <section id="view-bookshelf" class="view-section shelf-view" aria-label="이야기 책장">
-    <img class="shelf-pc-bg-solid-group" src="assets/figma/shelf-pc-bg-solid-group.png" alt="" aria-hidden="true">
-    <div class="shelf-pc-top-dim" aria-hidden="true"></div>
     <img class="rose-overlay" src="assets/figma/dust-particles.svg" alt="" aria-hidden="true">
     <canvas class="ambient-particle-canvas" aria-hidden="true"></canvas>
 
-    <header class="public-header">
+        <div class="shelf-pc-top-dim" aria-hidden="true"></div>
+
+        <header class="public-header">
       <button id="header-logo-home" class="public-logo" type="button" aria-label="처음으로">
         <span class="public-logo-badge"><img src="assets/figma/shelf-pc-star.svg" alt=""></span>
         <span>SURANG HIGHSCHOOL</span>
@@ -104,18 +106,21 @@
       </nav>
     </header>
 
-    <div class="shelf-pc-cabinet" aria-hidden="true">
-      <img src="assets/figma/shelf-pc-bg-photo.png" alt="">
+    <div class="shelf-scene-stage wood-paneling-bg">
+          <div class="shelf-pc-cabinet" aria-hidden="true">
+        <img src="assets/figma/bg-bookshelf.png" alt="">
+      </div>
+      <div class="shelf-layout-stage">
+        <main class="shelves-stage">
+          <div id="shelves-list" class="shelves-list"></div>
+        </main>
+      </div>
+      <img class="shelf-pc-frame" src="assets/figma/shelf-pc-frame.png" alt="" aria-hidden="true">
     </div>
-    <div class="shelf-layout-stage">
-      <main class="shelves-stage">
-        <div id="shelves-list" class="shelves-list"></div>
-      </main>
+    <div class="shelf-pc-light-overlay" aria-hidden="true">
+      <img class="shelf-pc-window-light" src="assets/figma/desktop-shelf-window-light.png" alt="">
     </div>
-    <img class="shelf-pc-frame" src="assets/figma/shelf-pc-frame.png" alt="" aria-hidden="true">
   </section>
-
-  <img class="shelf-pc-window-light shelf-pc-light-overlay" src="assets/figma/shelf-pc-window-light.svg" alt="" aria-hidden="true">
 
   <div id="popup-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="popup-book-title">
     <div class="popup-scrim"></div>
@@ -123,7 +128,7 @@
       <div class="popup-page popup-page-left">
         <img class="popup-paper-image" src="assets/figma/popup-paper-texture.jpg" alt="" aria-hidden="true">
         <div class="popup-cover">
-          <img id="popup-cover-img" src="assets/figma/popup-cover-art.png" alt="">
+          <img id="popup-cover-img" class="managed-image" alt="">
           <div class="popup-cover-shade"></div>
           <p id="popup-project-label" class="popup-project-label">페어명</p>
           <img class="popup-cover-divider" src="assets/figma/popup-divider.svg" alt="">
@@ -153,12 +158,12 @@
   <section id="view-detail" class="view-section detail-view" aria-label="책 상세">
     <img class="ambient-photo" src="assets/figma/detail-bg.jpg" alt="" aria-hidden="true">
     <div id="detail-backdrop" class="detail-backdrop" aria-hidden="true">
-      <img id="detail-backdrop-img" src="assets/figma/detail-hero.png" alt="">
+      <img id="detail-backdrop-img" class="managed-image" alt="">
     </div>
     <img class="rose-overlay" src="assets/figma/dust-particles.svg" alt="" aria-hidden="true">
     <canvas class="ambient-particle-canvas" aria-hidden="true"></canvas>
     <div id="detail-hero" class="detail-hero">
-      <img id="detail-bg-img" class="detail-hero-image" src="assets/figma/detail-hero.png" alt="">
+      <img id="detail-bg-img" class="detail-hero-image managed-image" alt="">
       <div id="detail-gradient-overlay" class="detail-gradient-overlay"></div>
     </div>
 
@@ -199,6 +204,6 @@
 
   <script src="js/firebase-config.js?v=1"></script>
   <script src="js/db.js?v=8"></script>
-  <script src="js/index.js?v=43"></script>
+  <script src="js/index.js?v=49"></script>
 </body>
 </html>

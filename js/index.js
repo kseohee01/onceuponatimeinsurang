@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const detailView = views.detail;
   const introBook = document.querySelector('.intro-book');
   const introMobileStage = document.querySelector('.intro-mobile-stage');
+  const shelfSceneStage = document.querySelector('.shelf-scene-stage');
   const shelfLayoutStage = document.querySelector('.shelf-layout-stage');
-  const shelfWindowLight = document.querySelector('.shelf-pc-window-light');
   const bgmAudio = document.getElementById('site-bgm-audio');
   const bgmWidgets = [...document.querySelectorAll('.site-bgm-widget')];
   const booksPerShelf = 6;
@@ -50,12 +50,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobile = viewportWidth < viewportHeight;
     const designWidth = mobile ? 390 : 1440;
     const designHeight = mobile ? 844 : 900;
-    const scale = Math.min(viewportWidth / designWidth, viewportHeight / designHeight);
-    introBook.style.setProperty('--intro-book-scale', String(scale));
-    views.bookshelf.style.setProperty('--shelf-stage-scale', String(scale));
+    const introScale = Math.min(viewportWidth / designWidth, viewportHeight / designHeight);
+    const shelfScale = mobile
+      ? Math.min(viewportWidth / designWidth, viewportHeight / designHeight)
+      : viewportHeight / designHeight;
+    introBook.style.setProperty('--intro-book-scale', String(introScale));
+    shelfSceneStage.style.setProperty('--shelf-stage-scale', String(shelfScale));
     if (mobile) {
-      const stageWidth = 390 * scale;
-      const stageHeight = 844 * scale;
+      const stageWidth = 390 * introScale;
+      const stageHeight = 844 * introScale;
       introMobileStage.style.width = `${stageWidth}px`;
       introMobileStage.style.height = `${stageHeight}px`;
       const stageLeft = (viewportWidth - stageWidth) / 2;
@@ -66,21 +69,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       introMobileStage.removeAttribute('style');
     }
-    shelfLayoutStage.style.setProperty('--shelf-stage-scale', String(scale));
-    const shelfStageWidth = designWidth * scale;
+    const shelfStageWidth = designWidth * shelfScale;
     const siteFrameWidth = mobile
       ? viewportWidth
       : Math.min(viewportWidth, viewportHeight * 16 / 9);
-    const shelfSideExtension = Math.max(0, (siteFrameWidth - shelfStageWidth) / 2 / scale);
+    const shelfSideExtension = Math.max(0, (siteFrameWidth - shelfStageWidth) / 2 / shelfScale);
     shelfLayoutStage.style.setProperty('--shelf-left-extension', `${-shelfSideExtension}px`);
     shelfLayoutStage.style.setProperty('--shelf-right-extension', `${-shelfSideExtension}px`);
-    if (!mobile) {
-      const shelfStageHeight = designHeight * scale;
-      shelfWindowLight.style.setProperty('--shelf-light-left', `${(viewportWidth - shelfStageWidth) / 2 + 631 * scale}px`);
-      shelfWindowLight.style.setProperty('--shelf-light-top', `${(viewportHeight - shelfStageHeight) / 2 - 92 * scale}px`);
-      shelfWindowLight.style.setProperty('--shelf-light-width', `${910 * scale}px`);
-      shelfWindowLight.style.setProperty('--shelf-light-height', `${729 * scale}px`);
-    }
+    shelfSceneStage.style.setProperty('--shelf-viewport-extension', `${shelfSideExtension}px`);
     views.intro.classList.add('intro-scale-ready');
     views.bookshelf.classList.add('shelf-scale-ready');
   }
@@ -149,6 +145,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
   }
 
+  function setManagedImage(image, source) {
+    const currentSource = image.getAttribute('src') || '';
+    const nextSource = source || '';
+    if (currentSource === nextSource) {
+      if (nextSource && image.complete && image.naturalWidth > 0) {
+        image.classList.add('is-loaded');
+      }
+      return;
+    }
+
+    image.classList.remove('is-loaded');
+    image.onload = () => {
+      image.classList.add('is-loaded');
+      if (image.id === 'detail-bg-img') updateBubbleLayout();
+    };
+    image.onerror = () => {
+      image.classList.remove('is-loaded');
+      image.removeAttribute('src');
+    };
+    if (nextSource) image.src = nextSource;
+    else image.removeAttribute('src');
+  }
+
   function activeBooks() {
     return getBooks()
       .filter((book) => book.status === 'active')
@@ -170,7 +189,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bookRowIndex = Math.floor(visualIndex / booksPerShelf);
     const bookColumnIndex = visualIndex % booksPerShelf;
     button.style.setProperty('--shelf-book-delay', `${90 + bookRowIndex * 140 + bookColumnIndex * 45}ms`);
-    button.style.setProperty('--spine-color', book.spineColor || '#6d4f3d');
+    button.style.setProperty(
+      '--spine-color',
+      book.spineImage ? '#000000' : (book.spineColor || '#000000')
+    );
     if (book.spineImage) {
       button.style.backgroundImage = `url("${book.spineImage}")`;
       button.style.backgroundSize = 'cover';
@@ -217,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     modal.classList.remove('closing-fade', 'close-immediate');
     modal.querySelector('.open-book').style.removeProperty('transform');
     selectedBook = book;
-    document.getElementById('popup-cover-img').src = getPopupCoverSource(book);
+    setManagedImage(document.getElementById('popup-cover-img'), getPopupCoverSource(book));
     document.getElementById('popup-project-label').textContent = book.concept || '페어명';
     document.getElementById('popup-characters-row').textContent =
       (book.participatingCharacters || []).slice(0, 3).join('  X  ') || '캐릭터 이름 X 캐릭터 이름';
@@ -226,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('popup-book-title').textContent = book.title;
     document.getElementById('popup-book-desc').textContent =
       book.description || `${book.title}의 인물들이 수랑고에서 만나 새롭게 써 내려가는 이야기입니다.`;
-    preloadDetailImage(book.detailBgImage || FIGMA_DETAIL);
+    if (book.detailBgImage) preloadDetailImage(book.detailBgImage);
     updatePopupScale();
     modal.classList.add('open');
     requestAnimationFrame(updatePopupTypography);
@@ -236,9 +258,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getPopupCoverSource(book) {
     const isMobileLayout = window.matchMedia('(max-aspect-ratio: 1 / 1)').matches;
     if (isMobileLayout) {
-      return book.mobileCoverImage || book.coverImage || FIGMA_COVER;
+      return book.mobileCoverImage || book.coverImage || '';
     }
-    return book.coverImage || book.mobileCoverImage || FIGMA_COVER;
+    return book.coverImage || book.mobileCoverImage || '';
   }
 
   function updatePopupTypography() {
@@ -302,27 +324,85 @@ document.addEventListener('DOMContentLoaded', async () => {
     const canvasStates = new WeakMap();
     const sunBokehStates = new WeakMap();
     const motionScale = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.35 : 1;
+    const particleTimeScale = 0.5;
+    const renderInterval = 1000 / 30;
+    let canvasLayoutVersion = 0;
     let previousTime = performance.now();
 
+    window.addEventListener('resize', () => {
+      canvasLayoutVersion += 1;
+    }, { passive: true });
+
+    function createStarSprite(mote) {
+      const padding = 2;
+      const size = Math.ceil(mote.glow * 2 + padding * 2);
+      const center = size / 2;
+      const sprite = document.createElement('canvas');
+      sprite.width = size;
+      sprite.height = size;
+      const context = sprite.getContext('2d');
+      const [red, green, blue] = mote.color;
+      const gradient = context.createRadialGradient(center, center, 0, center, center, mote.glow);
+      gradient.addColorStop(0, `rgba(${red}, ${green}, ${blue}, 1)`);
+      gradient.addColorStop(0.24, `rgba(${red}, ${green}, ${blue}, 0.42)`);
+      gradient.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`);
+      context.fillStyle = gradient;
+      context.beginPath();
+      context.arc(center, center, mote.glow, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+      context.beginPath();
+      context.arc(center, center, mote.radius, 0, Math.PI * 2);
+      context.fill();
+
+      if (mote.hasRays) {
+        const ray = mote.glow * 0.75;
+        context.strokeStyle = `rgba(${red}, ${green}, ${blue}, 0.42)`;
+        context.lineWidth = 0.6;
+        context.beginPath();
+        context.moveTo(center - ray, center);
+        context.lineTo(center + ray, center);
+        context.moveTo(center, center - ray);
+        context.lineTo(center, center + ray);
+        context.stroke();
+      }
+      return sprite;
+    }
+
     function createMotes(width, height) {
-      const count = width < 768 ? 12 : 18;
-      return Array.from({ length: count }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        radius: 48 + Math.random() * 88,
-        speed: 5 + Math.random() * 10,
-        drift: 18 + Math.random() * 44,
-        alpha: 0.04 + Math.random() * 0.04,
-        phase: Math.random() * Math.PI * 2,
-        twinkle: 1.2 + Math.random() * 2.2
-      }));
+      const count = width < 768 ? 34 : 60;
+      const colors = [
+        [255, 246, 224],
+        [255, 230, 190],
+        [255, 211, 211],
+        [210, 221, 255]
+      ];
+      return Array.from({ length: count }, () => {
+        const mote = {
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: 0.7 + Math.random() * 1.7,
+          glow: 4 + Math.random() * 8,
+          speed: 2 + Math.random() * 3,
+          drift: 2 + Math.random() * 7,
+          alpha: 0.18 + Math.random() * 0.34,
+          phase: Math.random() * Math.PI * 2,
+          twinkle: 0.5 + Math.random() * 1.5,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          hasRays: Math.random() < 0.18
+        };
+        mote.sprite = createStarSprite(mote);
+        return mote;
+      });
     }
 
     function prepareCanvas(canvas) {
+      if (!canvas.closest('.view-section')?.classList.contains('active')) return null;
+      let state = canvasStates.get(canvas);
+      if (state?.layoutVersion === canvasLayoutVersion) return state;
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return null;
-      const ratio = Math.min(2, window.devicePixelRatio || 1);
-      let state = canvasStates.get(canvas);
+      const ratio = Math.min(1.25, window.devicePixelRatio || 1);
       if (!state || state.width !== rect.width || state.height !== rect.height || state.ratio !== ratio) {
         canvas.width = Math.round(rect.width * ratio);
         canvas.height = Math.round(rect.height * ratio);
@@ -330,9 +410,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           width: rect.width,
           height: rect.height,
           ratio,
-          motes: createMotes(rect.width, rect.height)
+          motes: createMotes(rect.width, rect.height),
+          context: canvas.getContext('2d'),
+          layoutVersion: canvasLayoutVersion
         };
         canvasStates.set(canvas, state);
+      } else {
+        state.layoutVersion = canvasLayoutVersion;
       }
       return state;
     }
@@ -352,10 +436,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function prepareSunBokehCanvas(canvas) {
+      if (!canvas.closest('.view-section')?.classList.contains('active')) return null;
+      let state = sunBokehStates.get(canvas);
+      if (state?.layoutVersion === canvasLayoutVersion) return state;
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return null;
-      const ratio = Math.min(2, window.devicePixelRatio || 1);
-      let state = sunBokehStates.get(canvas);
+      const ratio = Math.min(1.25, window.devicePixelRatio || 1);
       if (!state || state.width !== rect.width || state.height !== rect.height || state.ratio !== ratio) {
         canvas.width = Math.round(rect.width * ratio);
         canvas.height = Math.round(rect.height * ratio);
@@ -363,15 +449,19 @@ document.addEventListener('DOMContentLoaded', async () => {
           width: rect.width,
           height: rect.height,
           ratio,
-          bokeh: createSunBokeh(rect.width, rect.height)
+          bokeh: createSunBokeh(rect.width, rect.height),
+          context: canvas.getContext('2d'),
+          layoutVersion: canvasLayoutVersion
         };
         sunBokehStates.set(canvas, state);
+      } else {
+        state.layoutVersion = canvasLayoutVersion;
       }
       return state;
     }
 
     function drawSunBokeh(canvas, state, time) {
-      const context = canvas.getContext('2d');
+      const context = state.context;
       context.setTransform(state.ratio, 0, 0, state.ratio, 0, 0);
       context.clearRect(0, 0, state.width, state.height);
 
@@ -394,33 +484,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function drawCanvas(canvas, state, time, delta) {
-      const context = canvas.getContext('2d');
+      const context = state.context;
       context.setTransform(state.ratio, 0, 0, state.ratio, 0, 0);
       context.clearRect(0, 0, state.width, state.height);
+      context.globalCompositeOperation = 'lighter';
 
       state.motes.forEach((mote) => {
-        mote.y -= mote.speed * delta * motionScale;
-        if (mote.y < -mote.radius * 2) {
-          mote.y = state.height + mote.radius * 2;
+        mote.y -= mote.speed * delta * motionScale * particleTimeScale;
+        if (mote.y < -mote.glow) {
+          mote.y = state.height + mote.glow;
           mote.x = Math.random() * state.width;
         }
-        const x = mote.x + Math.sin(time * 0.00035 + mote.phase) * mote.drift * motionScale;
-        const pulse = 0.62 + Math.sin(time * 0.001 * mote.twinkle + mote.phase) * 0.38;
-
-        const gradient = context.createRadialGradient(x, mote.y, 0, x, mote.y, mote.radius);
-        gradient.addColorStop(0, `rgba(255, 235, 202, ${mote.alpha * pulse * 0.72})`);
-        gradient.addColorStop(0.22, `rgba(255, 211, 164, ${mote.alpha * pulse * 0.34})`);
-        gradient.addColorStop(0.66, `rgba(225, 176, 132, ${mote.alpha * pulse * 0.09})`);
-        gradient.addColorStop(1, 'rgba(225, 176, 132, 0)');
-        context.fillStyle = gradient;
-        context.beginPath();
-        context.arc(x, mote.y, mote.radius, 0, Math.PI * 2);
-        context.fill();
+        const particleTime = time * particleTimeScale;
+        const x = mote.x + Math.sin(particleTime * 0.00018 + mote.phase) * mote.drift * motionScale;
+        const y = mote.y + Math.cos(particleTime * 0.00013 + mote.phase) * 4 * motionScale;
+        const cycle = particleTime * 0.001 * Math.PI * 2 / mote.twinkle * motionScale + mote.phase;
+        const pulse = 0.16 + Math.pow((Math.sin(cycle) + 1) / 2, 2.4) * 0.84;
+        context.globalAlpha = mote.alpha * (0.3 + pulse * 0.7);
+        context.drawImage(
+          mote.sprite,
+          Math.round(x - mote.sprite.width / 2),
+          Math.round(y - mote.sprite.height / 2)
+        );
       });
+      context.globalAlpha = 1;
+      context.globalCompositeOperation = 'source-over';
     }
 
     function animate(time) {
-      const delta = Math.min(0.05, (time - previousTime) / 1000);
+      requestAnimationFrame(animate);
+      if (document.hidden || time - previousTime < renderInterval) return;
+      const delta = Math.min(0.08, (time - previousTime) / 1000);
       previousTime = time;
       canvases.forEach((canvas) => {
         const state = prepareCanvas(canvas);
@@ -430,7 +524,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const state = prepareSunBokehCanvas(canvas);
         if (state) drawSunBokeh(canvas, state, time);
       });
-      requestAnimationFrame(animate);
     }
 
     requestAnimationFrame(animate);
@@ -498,14 +591,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const renderSequence = ++detailRenderSequence;
     const detailWasActive = views.detail.classList.contains('active');
     selectedBook = book;
-    const image = book.detailBgImage || FIGMA_DETAIL;
-    await preloadDetailImage(image);
+    const image = book.detailBgImage || '';
+    if (image) await preloadDetailImage(image);
     if (renderSequence !== detailRenderSequence || selectedBook?.id !== book.id) return;
     if (!detailWasActive && !modal.classList.contains('open')) return;
     const detailImage = document.getElementById('detail-bg-img');
     const backdropImage = document.getElementById('detail-backdrop-img');
-    detailImage.src = image;
-    backdropImage.src = image;
+    setManagedImage(detailImage, image);
+    setManagedImage(backdropImage, image);
 
     document.getElementById('detail-gradient-overlay').style.removeProperty('background');
 
@@ -727,12 +820,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateIntroBookScale();
     updatePopupScale();
     if (modal.classList.contains('open')) {
-      if (selectedBook) document.getElementById('popup-cover-img').src = getPopupCoverSource(selectedBook);
+      if (selectedBook) setManagedImage(document.getElementById('popup-cover-img'), getPopupCoverSource(selectedBook));
       requestAnimationFrame(updatePopupTypography);
     }
     updateBubbleLayout();
   });
-  document.getElementById('detail-bg-img').addEventListener('load', updateBubbleLayout);
   const detailResizeObserver = new ResizeObserver(updateBubbleLayout);
   detailResizeObserver.observe(document.querySelector('.detail-hero'));
   document.getElementById('btn-minigame').addEventListener('click', () => {
