@@ -29,12 +29,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   let detailRenderSequence = 0;
   const detailImagePreloads = new Map();
 
-  function resetTransientNavigationState() {
+  function dismissBookPopupForNavigation() {
     clearTimeout(popupCloseTimer);
-    clearTimeout(viewTransitionTimer);
     selectedBook = null;
-    modal.classList.remove('open', 'closing-fade', 'close-immediate');
+    modal.classList.add('close-immediate');
+    modal.classList.remove('open', 'closing-fade');
     modal.querySelector('.open-book').style.removeProperty('transform');
+    requestAnimationFrame(() => modal.classList.remove('close-immediate'));
+  }
+
+  function resetTransientNavigationState() {
+    clearTimeout(viewTransitionTimer);
+    dismissBookPopupForNavigation();
     Object.values(views).forEach((view) => {
       view.classList.remove('active', 'view-entering', 'view-leaving', 'view-preparing');
     });
@@ -250,7 +256,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     modal.querySelector('.open-book').style.removeProperty('transform');
     selectedBook = book;
     setManagedImage(document.getElementById('popup-cover-img'), getPopupCoverSource(book));
-    document.getElementById('popup-project-label').textContent = book.concept || '페어명';
+    const conceptLabel = book.concept || '페어명';
+    document.getElementById('popup-project-label').textContent = conceptLabel;
+    document.getElementById('popup-project-label-banner').textContent = conceptLabel;
     document.getElementById('popup-characters-row').textContent =
       (book.participatingCharacters || []).slice(0, 3).join('  X  ') || '캐릭터 이름 X 캐릭터 이름';
     document.querySelector('#popup-book-subtitle .popup-english-track').textContent =
@@ -775,9 +783,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('btn-enter').addEventListener('click', () => {
+    // A previous popup close can still have a pending animation timer when the
+    // user returns home and immediately starts again. Clear it before showing
+    // the shelf so a stale selected book cannot reappear over the new view.
+    dismissBookPopupForNavigation();
     showView('bookshelf');
   });
-  document.getElementById('header-logo-home').addEventListener('click', () => showView('intro'));
+  document.getElementById('header-logo-home').addEventListener('click', () => {
+    dismissBookPopupForNavigation();
+    showView('intro');
+  });
   document.getElementById('btn-close-popup').addEventListener('click', () => closeBook({ animate: true }));
   document.getElementById('btn-read-more').addEventListener('click', () => {
     if (selectedBook) renderDetail(selectedBook);

@@ -901,6 +901,41 @@ button:focus-visible {
   object-fit: cover;
 }
 
+.shelf-decoration {
+  position: absolute;
+  z-index: 3;
+  display: block;
+  pointer-events: none;
+}
+
+.shelf-decoration-mini-frame {
+  top: 109px;
+  left: 917px;
+  width: 209px;
+  height: 209px;
+}
+
+.shelf-decoration-plant {
+  top: 265px;
+  left: 334px;
+  width: 276px;
+  height: 349px;
+}
+
+.shelf-decoration-left-still-life {
+  top: 262px;
+  left: -525px;
+  width: 792px;
+  height: 707px;
+}
+
+.shelf-decoration-right-frame {
+  top: 139px;
+  left: 1319px;
+  width: 354px;
+  height: 354px;
+}
+
 .shelf-pc-frame {
   position: absolute;
   z-index: 1;
@@ -1314,7 +1349,7 @@ button:focus-visible {
   }
 }
 
-.popup-cover {
+.popup-cover-frame {
   position: absolute;
   z-index: 1;
   top: 48px;
@@ -1323,12 +1358,22 @@ button:focus-visible {
   left: 48px;
   height: 511px;
   overflow: visible;
+}
+
+.popup-cover {
+  position: absolute;
+  z-index: 2;
+  inset: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 4px solid #cea46f;
   border-radius: 164px;
   background: #000000;
-  box-shadow: none;
+  box-shadow: 0 0 16px #d4ac80;
 }
 
 .popup-cover > img:first-child {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1339,8 +1384,10 @@ button:focus-visible {
   position: absolute;
   inset: 0;
   border-radius: 164px;
-  background: rgba(195, 168, 141, 0.12);
-  box-shadow: inset 0 0 24px #f4ede5, inset 0 0 23px 15px rgba(244, 237, 229, 0.92);
+  background: #c3a88d;
+  box-shadow: inset 0 0 24.4px #f4ede5;
+  mix-blend-mode: hard-light;
+  opacity: 0.6;
 }
 
 .popup-cover:has(.managed-image:not(.is-loaded)) .popup-cover-shade {
@@ -1348,29 +1395,74 @@ button:focus-visible {
   box-shadow: none;
 }
 
-.popup-project-label {
+.popup-cover-ornament {
   position: absolute;
-  right: 0;
-  top: calc(100% - 9px);
-  bottom: auto;
-  left: 0;
-  margin: 0;
-  color: #ccb197;
-  font: 700 24px/normal "Gowun Batang", serif;
-  text-align: center;
-  text-shadow: none;
+  z-index: 1;
+  top: -23px;
+  left: -41px;
+  display: block;
+  width: 446px;
+  height: 589px;
+  pointer-events: none;
 }
 
-.popup-cover-divider {
+.popup-cover-ornament img,
+.popup-concept-ribbon img,
+.popup-concept-star img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.popup-cover-ornament img {
+  transform: scaleX(-1);
+}
+
+.popup-concept-banner {
   position: absolute;
-  top: calc(100% - 25px);
-  bottom: auto;
+  z-index: 3;
+  top: 420px;
   left: 50%;
-  width: 126px;
-  height: 16px;
+  width: 398px;
+  height: 124px;
   transform: translateX(-50%);
-  filter: none;
-  opacity: 1;
+  pointer-events: none;
+}
+
+.popup-concept-ribbon {
+  position: absolute;
+  inset: 0;
+  transform: scaleY(-1);
+}
+
+.popup-project-label {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  top: 33px;
+  left: 0;
+  margin: 0;
+  background: linear-gradient(180deg, #ccb197, #a67648);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  font: 700 24px/normal "Gowun Batang", serif;
+  text-align: center;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.25);
+}
+
+.popup-cover > .popup-project-label {
+  display: none;
+}
+
+.popup-concept-star {
+  position: absolute;
+  z-index: 1;
+  top: 60px;
+  left: 50%;
+  width: 35px;
+  height: 35px;
+  transform: translateX(-50%) scaleY(-1);
 }
 
 .popup-close {
@@ -1734,7 +1826,7 @@ button:focus-visible {
 .story-bubble::after {
   position: absolute;
   z-index: 0;
-  bottom: calc(-1cqw + 1px);
+  bottom: -1cqw;
   width: 1.6cqw;
   height: 1cqw;
   content: "";
@@ -2481,6 +2573,10 @@ button:focus-visible {
     object-fit: cover;
   }
 
+  .shelf-decoration {
+    display: none;
+  }
+
   .shelves-list {
     display: flex;
     height: auto;
@@ -2511,7 +2607,7 @@ button:focus-visible {
 
   .book-spine {
     width: var(--mobile-spine-width, 50px);
-    height: clamp(120px, var(--spine-height, 200px), 200px);
+    height: 200px;
     min-height: 0;
     max-height: 200px;
     padding: 16px 4px;
@@ -2627,16 +2723,21 @@ button:focus-visible {
     display: none;
   }
 
-  .popup-cover {
-    top: 85px;
+  .popup-cover-frame {
+    top: 24px;
     right: 24px;
     bottom: auto;
     left: 24px;
-    height: 198px;
+    height: 232px;
     overflow: visible;
+  }
+
+  .popup-cover {
+    overflow: hidden;
     border-radius: 164px;
-    background: transparent;
-    box-shadow: none;
+    border: 1px solid #cea46f;
+    background: #000;
+    box-shadow: 0 0 8px rgba(206, 164, 111, 0.64);
   }
 
   .popup-cover > img:first-child {
@@ -2645,30 +2746,42 @@ button:focus-visible {
 
   .popup-cover-shade {
     border-radius: 164px;
-    background: rgba(195, 168, 141, 0.12);
-    box-shadow:
-      inset 0 0 24px #f4ede5,
-      inset 0 0 23px 15px rgba(244, 237, 229, 0.92);
+    background: #c3a88d;
+    box-shadow: inset 0 0 24.4px #f4ede5;
+    mix-blend-mode: hard-light;
+    opacity: 0.6;
+  }
+
+  .popup-cover-ornament {
+    top: -25px;
+    left: 50%;
+    width: 374px;
+    height: 284px;
+    opacity: 0.5;
+    transform: translateX(-50%) rotate(-90deg) scaleY(-1);
+  }
+
+  .popup-cover-ornament img {
+    transform: none;
+  }
+
+  .popup-concept-banner {
+    top: 127px;
+    left: -31px;
+    width: 398px;
+    height: 124px;
+    transform: none;
   }
 
   .popup-project-label {
-    top: -52px;
-    right: 0;
-    bottom: auto;
-    left: 0;
-    color: #ccb197;
-    font-size: 24px;
-    line-height: normal;
-    text-shadow: none;
+    top: 28px;
+    font-size: 20px;
   }
 
-  .popup-cover-divider {
-    top: -68px;
-    bottom: auto;
-    width: 126px;
-    height: 16px;
-    filter: none;
-    opacity: 1;
+  .popup-concept-star {
+    top: 48px;
+    width: 26px;
+    height: 26px;
   }
 
   .popup-close {

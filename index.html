@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Fredericka+the+Great&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Hamlet:wght@400;500;600;700&family=Inknut+Antiqua:wght@400&family=Instrument+Sans:wght@400;500;600&family=Marcellus+SC&family=Nanum+Myeongjo:wght@400;700;800&family=Rochester&display=swap" rel="stylesheet">
   <!-- Cute Spinning Flower Tan cursor by Cursors-4U. -->
   <link rel="stylesheet" href="https://cdn.cursors-4u.net/cursors/animated/cute-spinning-flower-tan-517a3242-32.css">
-  <link rel="stylesheet" href="css/index.css?v=82">
+  <link rel="stylesheet" href="css/index.css?v=84">
 </head>
 <body data-color-mode="fixed-light">
   <audio id="site-bgm-audio" loop autoplay preload="auto"></audio>
@@ -107,7 +107,7 @@
     </header>
 
     <div class="shelf-scene-stage wood-paneling-bg">
-          <div class="shelf-pc-cabinet" aria-hidden="true">
+      <div class="shelf-pc-cabinet" aria-hidden="true">
         <img src="assets/figma/bg-bookshelf.png" alt="">
       </div>
       <div class="shelf-layout-stage">
@@ -115,6 +115,10 @@
           <div id="shelves-list" class="shelves-list"></div>
         </main>
       </div>
+      <img class="shelf-decoration shelf-decoration-mini-frame" src="assets/figma/shelf-mini-frame.png" alt="" aria-hidden="true">
+      <img class="shelf-decoration shelf-decoration-plant" src="assets/figma/shelf-plant.png" alt="" aria-hidden="true">
+      <img class="shelf-decoration shelf-decoration-left-still-life" src="assets/figma/shelf-left-still-life.png" alt="" aria-hidden="true">
+      <img class="shelf-decoration shelf-decoration-right-frame" src="assets/figma/shelf-right-frame.png" alt="" aria-hidden="true">
       <img class="shelf-pc-frame" src="assets/figma/shelf-pc-frame.png" alt="" aria-hidden="true">
     </div>
     <div class="shelf-pc-light-overlay" aria-hidden="true">
@@ -127,11 +131,27 @@
     <article class="open-book">
       <div class="popup-page popup-page-left">
         <img class="popup-paper-image" src="assets/figma/popup-paper-texture.jpg" alt="" aria-hidden="true">
-        <div class="popup-cover">
+        <div class="popup-cover-frame">
+          <picture class="popup-cover-ornament" aria-hidden="true">
+            <source media="(max-aspect-ratio: 1 / 1)" srcset="assets/figma/popup-cover-back-mobile-latest.svg">
+            <img src="assets/figma/popup-cover-back-pc.svg" alt="">
+          </picture>
+          <div class="popup-cover">
           <img id="popup-cover-img" class="managed-image" alt="">
           <div class="popup-cover-shade"></div>
           <p id="popup-project-label" class="popup-project-label">페어명</p>
-          <img class="popup-cover-divider" src="assets/figma/popup-divider.svg" alt="">
+          </div>
+          <div class="popup-concept-banner" aria-hidden="true">
+            <picture class="popup-concept-ribbon">
+              <source media="(max-aspect-ratio: 1 / 1)" srcset="assets/figma/popup-concept-ribbon-mobile.svg">
+              <img src="assets/figma/popup-concept-ribbon-pc.svg" alt="">
+            </picture>
+            <p id="popup-project-label-banner" class="popup-project-label"></p>
+            <picture class="popup-concept-star">
+              <source media="(max-aspect-ratio: 1 / 1)" srcset="assets/figma/popup-concept-star-mobile.svg">
+              <img src="assets/figma/popup-concept-star-pc.svg" alt="">
+            </picture>
+          </div>
         </div>
       </div>
       <div class="popup-gutter" aria-hidden="true"></div>
@@ -204,6 +224,6 @@
 
   <script src="js/firebase-config.js?v=1"></script>
   <script src="js/db.js?v=8"></script>
-  <script src="js/index.js?v=50"></script>
+  <script src="js/index.js?v=52"></script>
 </body>
 </html>
