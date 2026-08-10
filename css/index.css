@@ -467,22 +467,6 @@ button:focus-visible {
   background: linear-gradient(44.4deg, #664d3f 5.1%, #1b100a 45.74%, #6b4f3b 96.58%);
 }
 
-/* Keep the butterfly in the book's coordinate system. The Figma offset and
-   width are expressed as percentages of the book, so their spacing remains
-   unchanged when the shared intro scale responds to the viewport. */
-.intro-book-butterfly {
-  position: absolute;
-  z-index: 4;
-  top: -11.111%;
-  left: -12.379%;
-  display: block;
-  width: 28.627%;
-  height: auto;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
-}
-
 .intro-book-canvas {
   position: relative;
   width: 517px;
