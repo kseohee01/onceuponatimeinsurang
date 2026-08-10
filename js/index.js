@@ -23,11 +23,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bgmObjectUrl = '';
   let bgmName = '';
   let bgmUpdatedAt = 0;
+  let bgmCopyright = DEFAULT_BGM_COPYRIGHT;
   let bgmLoadSequence = 0;
   let bgmPlayRequested = true;
   let bgmAutoplayPending = false;
   let detailRenderSequence = 0;
   const detailImagePreloads = new Map();
+  const popupMobileMedia = window.matchMedia('(aspect-ratio < 4 / 5)');
 
   function dismissBookPopupForNavigation() {
     clearTimeout(popupCloseTimer);
@@ -90,7 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updatePopupScale() {
     const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
     const viewportHeight = window.innerHeight;
-    if (viewportWidth < viewportHeight) {
+    if (popupMobileMedia.matches) {
       modal.style.removeProperty('--popup-scale');
       return;
     }
@@ -201,6 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const visualWidth = Math.max(30, Math.min(120, Number(book.spineWidth) || 60));
     button.style.setProperty('--spine-height', `${visualHeight}px`);
     button.style.setProperty('--spine-width', `${visualWidth}px`);
+    button.style.setProperty('--mobile-spine-height', `${Math.round(visualHeight * 200 / 270)}px`);
     button.style.setProperty('--mobile-spine-width', `${Math.round(visualWidth * 5 / 6)}px`);
     const bookRowIndex = Math.floor(visualIndex / booksPerShelf);
     const bookColumnIndex = visualIndex % booksPerShelf;
@@ -264,8 +267,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelector('#popup-book-subtitle .popup-english-track').textContent =
       book.subtitle || 'Once Upon a Time';
     document.getElementById('popup-book-title').textContent = book.title;
-    document.getElementById('popup-book-desc').textContent =
+    const popupDescription = document.getElementById('popup-book-desc');
+    const popupDescriptionText =
       book.description || `${book.title}의 인물들이 수랑고에서 만나 새롭게 써 내려가는 이야기입니다.`;
+    popupDescription.dataset.fullText = popupDescriptionText;
+    popupDescription.textContent = popupDescriptionText;
     if (book.detailBgImage) preloadDetailImage(book.detailBgImage);
     updatePopupScale();
     modal.classList.add('open');
@@ -274,8 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function getPopupCoverSource(book) {
-    const isMobileLayout = window.matchMedia('(max-aspect-ratio: 1 / 1)').matches;
-    if (isMobileLayout) {
+    if (popupMobileMedia.matches) {
       return book.mobileCoverImage || book.coverImage || '';
     }
     return book.coverImage || book.mobileCoverImage || '';
@@ -303,6 +308,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       subtitle.style.setProperty('--popup-subtitle-duration', `${Math.min(14, Math.max(7, 5 + subtitleOverflow / 36))}s`);
       subtitle.classList.add('is-overflowing');
     }
+
+    updatePopupDescriptionOverflow();
+  }
+
+  function updatePopupDescriptionOverflow() {
+    const description = document.getElementById('popup-book-desc');
+    const fullText = description.dataset.fullText || description.textContent || '';
+    description.textContent = fullText;
+
+    if (!popupMobileMedia.matches || description.scrollHeight <= description.clientHeight + 1) return;
+
+    let low = 0;
+    let high = fullText.length;
+    let fittedText = '...';
+    while (low <= high) {
+      const middle = Math.floor((low + high) / 2);
+      const candidate = `${fullText.slice(0, middle).trimEnd()}...`;
+      description.textContent = candidate;
+      if (description.scrollHeight <= description.clientHeight + 1) {
+        fittedText = candidate;
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    }
+    description.textContent = fittedText;
   }
 
   function closeBook({ animate = false } = {}) {
@@ -669,9 +700,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     uiLayer.setAttribute('aria-hidden', String(!uiVisible));
     const toggle = document.getElementById('btn-ui-toggle');
     toggle.setAttribute('aria-pressed', String(uiVisible));
-    document.getElementById('ui-toggle-switch').style.filter = uiVisible
-      ? 'none'
-      : 'grayscale(1) brightness(.7)';
+    toggle.setAttribute('aria-label', uiVisible ? 'UI 숨기기' : 'UI 보기');
+    toggle.title = uiVisible ? 'UI 숨기기' : 'UI 보기';
   }
 
   function updateOrientationButton() {
@@ -745,15 +775,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function updateBgmCopyright(value) {
+    bgmCopyright = typeof value === 'string' ? value.trim() : DEFAULT_BGM_COPYRIGHT;
+    bgmWidgets.forEach((button) => {
+      if (bgmCopyright) {
+        button.dataset.bgmCopyright = bgmCopyright;
+        button.setAttribute('aria-description', bgmCopyright);
+      } else {
+        delete button.dataset.bgmCopyright;
+        button.removeAttribute('aria-description');
+      }
+    });
+  }
+
   async function loadHomepageBgm(settings = null) {
-    const nextName = String(settings?.bgmName || '');
-    const nextUpdatedAt = Number(settings?.bgmUpdatedAt) || 0;
+    const currentSettings = settings || getSiteSettings();
+    updateBgmCopyright(currentSettings.bgmCopyright);
+    const nextName = String(currentSettings.bgmName || '');
+    const nextUpdatedAt = Number(currentSettings.bgmUpdatedAt) || 0;
     if (settings && nextName === bgmName && nextUpdatedAt === bgmUpdatedAt) return;
 
     const sequence = ++bgmLoadSequence;
     try {
       const bgm = await getHomepageBgm();
       if (sequence !== bgmLoadSequence) return;
+      updateBgmCopyright(bgm.bgmCopyright);
 
       const loadedName = String(bgm.bgmName || '');
       const loadedUpdatedAt = Number(bgm.bgmUpdatedAt) || 0;

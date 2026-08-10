@@ -8,8 +8,8 @@
   <title>이야기 책장 · System Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Hamlet:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/admin.css?v=17">
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Hahmlet:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css?v=21">
 </head>
 <body>
   <div id="admin-toast" class="admin-toast" role="status" aria-live="polite"></div>
@@ -337,6 +337,14 @@
           </span>
         </label>
 
+        <label class="bgm-copyright-field" for="bgm-copyright">
+          <span>저작권 정보</span>
+          <textarea id="bgm-copyright" rows="4" maxlength="1000">Music from #Uppbeat (free for Creators!):
+https://uppbeat.io/t/vocalista/sweet-lullaby
+License code: UFTCIOKHK9ASDJ43</textarea>
+          <small>BGM 버튼에 마우스를 올리거나 키보드로 포커스하면 툴팁으로 표시됩니다.</small>
+        </label>
+
         <audio id="bgm-admin-preview" class="bgm-admin-preview" controls loop></audio>
 
         <div class="bgm-settings-actions">
@@ -348,7 +356,7 @@
   </div>
 
   <script src="js/firebase-config.js?v=1"></script>
-  <script src="js/db.js?v=8"></script>
-  <script src="js/admin.js?v=11"></script>
+  <script src="js/db.js?v=9"></script>
+  <script src="js/admin.js?v=12"></script>
 </body>
 </html>

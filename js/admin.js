@@ -804,6 +804,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function refreshBgmSettings() {
     try {
+      const settings = getSiteSettings();
+      field('bgm-copyright').value = settings.bgmCopyright || '';
       const bgm = await getHomepageBgm();
       if (!pendingBgmFile) setBgmPreview(bgm.blob, bgm.bgmName);
     } catch (error) {
@@ -825,21 +827,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   field('save-bgm-button').addEventListener('click', async () => {
-    if (!pendingBgmFile) {
-      showToast('저장할 MP3 파일을 먼저 선택해 주세요.');
+    const copyright = field('bgm-copyright').value.trim();
+    const copyrightChanged = copyright !== (getSiteSettings().bgmCopyright || '');
+    if (!pendingBgmFile && !copyrightChanged) {
+      showToast('변경된 BGM 설정이 없습니다.');
       return;
     }
     const button = field('save-bgm-button');
     button.disabled = true;
     try {
-      await saveHomepageBgm(pendingBgmFile);
+      if (pendingBgmFile) await saveHomepageBgm(pendingBgmFile);
+      await saveHomepageBgmCopyright(copyright);
       pendingBgmFile = null;
       field('bgm-upload').value = '';
       await refreshBgmSettings();
-      showToast('홈페이지 BGM을 저장했습니다.');
+      showToast('홈페이지 BGM 설정을 저장했습니다.');
     } catch (error) {
       console.error('BGM 저장 실패', error);
-      showToast('BGM을 저장하지 못했습니다. 파일 크기와 브라우저 저장 권한을 확인해 주세요.');
+      showToast('BGM 설정을 저장하지 못했습니다. 파일 크기와 브라우저 저장 권한을 확인해 주세요.');
     } finally {
       button.disabled = false;
     }

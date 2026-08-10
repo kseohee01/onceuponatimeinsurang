@@ -727,6 +727,7 @@ button:focus-visible {
   font: 11px/1 "Marcellus SC", serif;
   letter-spacing: 0.08em;
   backdrop-filter: blur(7px);
+  overflow: visible;
   transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
 }
 
@@ -854,7 +855,8 @@ button:focus-visible {
   left: 50%;
   width: 1440px;
   height: 900px;
-  overflow: hidden;
+  /* The Figma side props intentionally extend beyond the 1440px stage. */
+  overflow: visible;
   visibility: hidden;
   transform: translate(-50%, -50%) scale(var(--shelf-stage-scale, 1));
   transform-origin: center;
@@ -909,6 +911,9 @@ button:focus-visible {
 }
 
 .shelf-decoration-mini-frame {
+  --shelf-decoration-enter-x: 22px;
+  --shelf-decoration-enter-y: -14px;
+  --shelf-decoration-delay: 260ms;
   top: 109px;
   left: 917px;
   width: 209px;
@@ -916,22 +921,91 @@ button:focus-visible {
 }
 
 .shelf-decoration-plant {
+  --shelf-decoration-enter-x: -22px;
+  --shelf-decoration-enter-y: 26px;
+  --shelf-decoration-delay: 340ms;
   top: 265px;
-  left: 334px;
+  left: 275px;
   width: 276px;
   height: 349px;
 }
 
+.site-bgm-widget[data-bgm-copyright]::after {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  left: 50%;
+  width: max-content;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 10px 12px;
+  content: attr(data-bgm-copyright);
+  transform: translate(-50%, -4px);
+  border: 1px solid rgba(223, 186, 139, 0.34);
+  border-radius: 10px;
+  background: rgba(27, 16, 10, 0.94);
+  box-shadow: 0 8px 24px rgba(13, 7, 4, 0.28);
+  color: #f7e3cc;
+  font: 11px/1.55 "Gowun Dodum", sans-serif;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+}
+
+.site-bgm-widget[data-bgm-copyright]:hover::after,
+.site-bgm-widget[data-bgm-copyright]:focus-visible::after {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (aspect-ratio < 1 / 1) {
+  .public-header .site-bgm-widget[data-bgm-copyright]::after,
+  .detail-header .site-bgm-widget[data-bgm-copyright]::after {
+    right: 0;
+    left: auto;
+    transform: translateY(-4px);
+  }
+
+  .public-header .site-bgm-widget[data-bgm-copyright]:hover::after,
+  .public-header .site-bgm-widget[data-bgm-copyright]:focus-visible::after,
+  .detail-header .site-bgm-widget[data-bgm-copyright]:hover::after,
+  .detail-header .site-bgm-widget[data-bgm-copyright]:focus-visible::after {
+    transform: translateY(0);
+  }
+}
+
+.detail-view.landscape-mode .detail-header .site-bgm-widget[data-bgm-copyright]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(-4px);
+}
+
+.detail-view.landscape-mode .detail-header .site-bgm-widget[data-bgm-copyright]:hover::after,
+.detail-view.landscape-mode .detail-header .site-bgm-widget[data-bgm-copyright]:focus-visible::after {
+  transform: translateY(0);
+}
+
 .shelf-decoration-left-still-life {
+  --shelf-decoration-enter-x: -52px;
+  --shelf-decoration-enter-y: 18px;
+  --shelf-decoration-delay: 160ms;
   top: 262px;
-  left: -525px;
+  left: calc(-525px - var(--shelf-viewport-extension, 0px));
   width: 792px;
   height: 707px;
 }
 
 .shelf-decoration-right-frame {
+  --shelf-decoration-enter-x: 52px;
+  --shelf-decoration-enter-y: -12px;
+  --shelf-decoration-delay: 220ms;
   top: 139px;
-  left: 1319px;
+  left: calc(1319px + var(--shelf-viewport-extension, 0px));
   width: 354px;
   height: 354px;
 }
@@ -1048,6 +1122,13 @@ button:focus-visible {
   animation-delay: var(--shelf-book-delay, 90ms);
 }
 
+.shelf-view.shelf-animating .shelf-decoration {
+  transform-origin: center;
+  animation: shelf-decoration-arrive 760ms cubic-bezier(0.16, 0.8, 0.24, 1) both;
+  animation-delay: var(--shelf-decoration-delay, 180ms);
+  will-change: opacity, transform;
+}
+
 @keyframes shelf-header-drop {
   from {
     opacity: 0;
@@ -1093,6 +1174,24 @@ button:focus-visible {
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0) scaleY(1);
+  }
+}
+
+@keyframes shelf-decoration-arrive {
+  from {
+    opacity: 0;
+    transform:
+      translate3d(
+        var(--shelf-decoration-enter-x, 0),
+        var(--shelf-decoration-enter-y, 18px),
+        0
+      )
+      scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -1352,7 +1451,7 @@ button:focus-visible {
 .popup-cover-frame {
   position: absolute;
   z-index: 1;
-  top: 48px;
+  top: 32px;
   right: 48px;
   bottom: auto;
   left: 48px;
@@ -1377,13 +1476,11 @@ button:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 164px;
 }
 
 .popup-cover-shade {
   position: absolute;
   inset: 0;
-  border-radius: 164px;
   background: #c3a88d;
   box-shadow: inset 0 0 24.4px #f4ede5;
   mix-blend-mode: hard-light;
@@ -1403,6 +1500,7 @@ button:focus-visible {
   display: block;
   width: 446px;
   height: 589px;
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -1425,30 +1523,38 @@ button:focus-visible {
   left: 50%;
   width: 398px;
   height: 124px;
-  transform: translateX(-50%);
+  display: block;
+  transform: translateX(-50%) scaleY(-1);
   pointer-events: none;
 }
 
 .popup-concept-ribbon {
   position: absolute;
   inset: 0;
-  transform: scaleY(-1);
+  transform: none;
 }
 
 .popup-project-label {
   position: absolute;
   z-index: 1;
-  right: 0;
   top: 33px;
-  left: 0;
+  right: auto;
+  left: calc(50% + 1.5px);
+  width: max-content;
+  max-width: calc(100% - 48px);
   margin: 0;
-  background: linear-gradient(180deg, #ccb197, #a67648);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+  background: none;
+  color: #a67648;
+  -webkit-text-fill-color: #a67648;
   font: 700 24px/normal "Gowun Batang", serif;
   text-align: center;
-  text-shadow: 0 0 4px rgba(255, 255, 255, 0.25);
+  -webkit-text-stroke: 2px rgba(255, 249, 243, 0.96);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 3px rgba(255, 255, 255, 0.2),
+    0 1px 2px rgba(112, 78, 45, 0.22);
+  transform: translateX(-50%) scaleY(-1);
+  white-space: nowrap;
 }
 
 .popup-cover > .popup-project-label {
@@ -1463,6 +1569,12 @@ button:focus-visible {
   width: 35px;
   height: 35px;
   transform: translateX(-50%) scaleY(-1);
+}
+
+.popup-concept-star img {
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  margin: -2px;
 }
 
 .popup-close {
@@ -1538,9 +1650,11 @@ button:focus-visible {
 }
 
 .popup-divider {
-  width: 100%;
-  height: 16px;
+  width: min(100%, 377.773px);
+  height: auto;
+  aspect-ratio: 377.773 / 16;
   margin: 16px 0;
+  object-fit: contain;
 }
 
 .popup-description {
@@ -1660,6 +1774,29 @@ button:focus-visible {
   object-position: center;
 }
 
+.detail-view.detail-animating .detail-hero-image.managed-image.is-loaded {
+  animation: detail-image-horizontal-reveal 960ms cubic-bezier(0.18, 0.78, 0.22, 1) 60ms both;
+  will-change: clip-path, opacity, filter;
+}
+
+@keyframes detail-image-horizontal-reveal {
+  0% {
+    clip-path: inset(0 50% round 8px);
+    opacity: 0;
+    filter: blur(4px) brightness(0.9);
+  }
+
+  42% {
+    opacity: 0.72;
+  }
+
+  100% {
+    clip-path: inset(0 0 round 0);
+    opacity: 1;
+    filter: blur(0) brightness(1);
+  }
+}
+
 .detail-gradient-overlay {
   position: absolute;
   inset: 0;
@@ -1752,7 +1889,7 @@ button:focus-visible {
   background: var(--bubble-background, rgba(39, 39, 39, 0.5));
   box-shadow: none;
   color: #ffffff;
-  font: 500 1.4cqw/normal "Hamlet", serif;
+  font: 500 1.4cqw/normal "Hahmlet", serif;
   text-shadow: 0 0 0.8cqw rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(0.24cqw);
   filter: drop-shadow(0 0.275cqw 0.892cqw rgba(0, 0, 0, 0.25));
@@ -1773,6 +1910,9 @@ button:focus-visible {
   overflow-wrap: anywhere;
   white-space: normal;
   -webkit-text-fill-color: #ffffff;
+  text-shadow:
+    0 0 0.32cqw rgba(0, 0, 0, 0.3),
+    0 0 0.8cqw rgba(255, 255, 255, 0.42);
 }
 
 .story-bubble.tail-L {
@@ -1994,28 +2134,62 @@ button:focus-visible {
   top: 80px;
   bottom: auto;
   display: flex;
-  width: 95px;
-  height: 40px;
+  width: auto;
+  min-width: 0;
+  height: 34px;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 0;
-  border-radius: 24px;
-  background: rgba(0, 0, 0, 0.3);
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(247, 227, 204, 0.28);
+  border-radius: 999px;
+  background: rgba(27, 16, 10, 0.62);
   color: #f7e3cc;
   cursor: pointer;
-  font: 13px/1 "Marcellus SC", serif;
-  backdrop-filter: blur(6px);
+  font: 11px/1 "Gowun Dodum", sans-serif;
+  backdrop-filter: blur(7px);
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
 }
 
 .ui-toggle-button > img:first-child {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
+  transition: opacity 180ms ease, filter 180ms ease;
 }
 
-.ui-toggle-button > img:last-child {
-  width: 20px;
-  height: 20px;
+.ui-toggle-button::after {
+  position: absolute;
+  top: 16px;
+  left: 10px;
+  width: 18px;
+  height: 1.5px;
+  content: "";
+  transform: rotate(-42deg) scaleX(0);
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 3px rgba(247, 227, 204, 0.45);
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
+.ui-toggle-button[aria-pressed="false"] {
+  border-color: rgba(247, 227, 204, 0.18);
+  background: rgba(12, 8, 6, 0.76);
+  color: rgba(247, 227, 204, 0.66);
+}
+
+.ui-toggle-button[aria-pressed="false"] > img:first-child {
+  opacity: 0.55;
+  filter: grayscale(1) brightness(0.78);
+}
+
+.ui-toggle-button[aria-pressed="false"]::after {
+  transform: rotate(-42deg) scaleX(1);
+}
+
+.ui-toggle-button:hover,
+.ui-toggle-button:focus-visible {
+  border-color: rgba(247, 227, 204, 0.5);
+  background: rgba(45, 29, 20, 0.78);
 }
 
 .orientation-toggle-button {
@@ -2124,7 +2298,7 @@ button:focus-visible {
 
 /* Figma provides a separate mobile composition. Use it for narrow portrait
    windows too, even when their CSS width exceeds the phone breakpoint. */
-@media (max-aspect-ratio: 999 / 1000) {
+@media (aspect-ratio < 1 / 1) {
   .shelf-pc-frame,
   .shelf-pc-light-overlay {
     display: none;
@@ -2607,8 +2781,8 @@ button:focus-visible {
 
   .book-spine {
     width: var(--mobile-spine-width, 50px);
-    height: 200px;
-    min-height: 0;
+    height: var(--mobile-spine-height, 170px);
+    min-height: 90px;
     max-height: 200px;
     padding: 16px 4px;
     border-radius: 6px 6px 2px 2px;
@@ -2638,23 +2812,38 @@ button:focus-visible {
     text-align: center;
   }
 
+}
+
+/* The desktop popup remains readable at 4:5 and wider. Narrower viewports use
+   the stacked mobile composition before the two-page layout becomes cramped. */
+@media (aspect-ratio < 4 / 5) {
+
   .popup-scrim {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.63), rgba(67, 50, 34, 0.63));
     backdrop-filter: none;
   }
 
   .open-book {
+    --popup-mobile-cover-height: clamp(
+      232px,
+      min(calc((100vw - 56px) * 0.6967), 60dvh),
+      600px
+    );
     top: auto;
-    right: 0;
+    right: auto;
     bottom: 0;
-    left: 0;
+    left: 50%;
     display: flex;
     width: 100%;
-    height: min(523px, calc(100dvh - 16px));
+    max-width: none;
+    height: min(
+      calc(100dvh - 16px),
+      calc(var(--popup-mobile-cover-height) + 291px)
+    );
     box-sizing: border-box;
     flex-direction: column;
     overflow: hidden;
-    transform: translateY(104%) scale(0.985);
+    transform: translate(-50%, 104%) scale(0.985);
     transform-style: flat;
     border: 4px solid #dfba8b;
     border-bottom: 0;
@@ -2675,7 +2864,7 @@ button:focus-visible {
   }
 
   .modal-overlay.open .open-book {
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, 0) scale(1);
     animation: none;
   }
 
@@ -2704,9 +2893,9 @@ button:focus-visible {
   }
 
   .popup-page-left {
-    height: 283px;
-    min-height: 283px;
-    flex: 0 0 283px;
+    height: calc(var(--popup-mobile-cover-height) + 51px);
+    min-height: calc(var(--popup-mobile-cover-height) + 51px);
+    flex: 0 0 calc(var(--popup-mobile-cover-height) + 51px);
     border-radius: 0;
     box-shadow: none;
   }
@@ -2728,24 +2917,19 @@ button:focus-visible {
     right: 24px;
     bottom: auto;
     left: 24px;
-    height: 232px;
+    height: var(--popup-mobile-cover-height);
     overflow: visible;
   }
 
   .popup-cover {
     overflow: hidden;
-    border-radius: 164px;
-    border: 1px solid #cea46f;
+    border-radius: 50%;
+    border: 4px solid #cea46f;
     background: #000;
-    box-shadow: 0 0 8px rgba(206, 164, 111, 0.64);
-  }
-
-  .popup-cover > img:first-child {
-    border-radius: 164px;
+    box-shadow: 0 0 16px #d4ac80;
   }
 
   .popup-cover-shade {
-    border-radius: 164px;
     background: #c3a88d;
     box-shadow: inset 0 0 24.4px #f4ede5;
     mix-blend-mode: hard-light;
@@ -2753,35 +2937,54 @@ button:focus-visible {
   }
 
   .popup-cover-ornament {
-    top: -25px;
+    top: calc(var(--popup-mobile-cover-height) * -0.1078);
     left: 50%;
-    width: 374px;
-    height: 284px;
+    width: calc(var(--popup-mobile-cover-height) * 1.6121);
+    height: calc(var(--popup-mobile-cover-height) * 1.2241);
     opacity: 0.5;
-    transform: translateX(-50%) rotate(-90deg) scaleY(-1);
+    transform: translateX(-50%);
   }
 
   .popup-cover-ornament img {
-    transform: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--popup-mobile-cover-height) * 1.2241);
+    height: calc(var(--popup-mobile-cover-height) * 1.6121);
+    transform: translate(-50%, -50%) rotate(-90deg) scaleY(-1);
   }
 
   .popup-concept-banner {
-    top: 127px;
-    left: -31px;
-    width: 398px;
-    height: 124px;
-    transform: none;
+    top: auto;
+    bottom: clamp(-32.6px, -4.872vw, -19px);
+    left: 50%;
+    width: clamp(398px, 102.051vw, 668px);
+    height: auto;
+    aspect-ratio: 398 / 124;
+    transform: translateX(-50%) scaleY(-1);
+  }
+
+  .popup-concept-ribbon {
+    top: 0;
+    right: auto;
+    bottom: auto;
+    left: 11.13%;
+    width: 77.92%;
+    height: 81.17%;
   }
 
   .popup-project-label {
-    top: 28px;
-    font-size: 20px;
+    top: 22.58%;
+    left: calc(50% + 1px);
+    font-size: clamp(20px, 5.128vw, 34px);
+    -webkit-text-stroke-width: clamp(1.5px, 0.385vw, 2.6px);
   }
 
   .popup-concept-star {
-    top: 48px;
-    width: 26px;
-    height: 26px;
+    top: 38.71%;
+    left: 50%;
+    width: clamp(26px, 6.667vw, 43.5px);
+    height: clamp(26px, 6.667vw, 43.5px);
   }
 
   .popup-close {
@@ -2802,7 +3005,9 @@ button:focus-visible {
     height: 100%;
     min-height: 0;
     flex-direction: column;
-    padding: 12px 20px 82px;
+    /* The OPEN button is absolutely positioned, so reserve its full height
+       plus a visual gap instead of letting the copy flow underneath it. */
+    padding: 12px 20px 110px;
     color: #8f6348;
     text-align: left;
   }
@@ -2852,10 +3057,10 @@ button:focus-visible {
   .popup-description {
     display: -webkit-box;
     min-height: 0;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     max-width: none;
-    max-height: 6.4em;
-    margin: 16px 0 0;
+    max-height: 3.2em;
+    margin: 12px 0 0;
     padding-right: 0;
     overflow: hidden;
     color: #8f6348;
@@ -2863,8 +3068,9 @@ button:focus-visible {
     text-overflow: ellipsis;
     text-shadow: 0 0 4px rgba(143, 99, 72, 0.25);
     white-space: normal;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 2;
   }
 
   .popup-description::-webkit-scrollbar {
@@ -2874,7 +3080,7 @@ button:focus-visible {
   .open-story-button {
     position: absolute;
     right: 50%;
-    bottom: 16px;
+    bottom: 30px;
     width: 106px;
     height: 48px;
     min-width: 106px;
@@ -2885,6 +3091,7 @@ button:focus-visible {
     background:
       radial-gradient(ellipse at 50% 100%, rgba(255, 174, 103, 0.5), rgba(129, 103, 77, 0) 72%),
       #81674d;
+    box-shadow: 0 4px 4px rgba(27, 42, 30, 0.25);
     color: #f7e3cc;
     font-size: 16px;
   }
@@ -2898,24 +3105,29 @@ button:focus-visible {
     transform: translateX(50%) translateY(-1px);
   }
 
+}
+
+@media (aspect-ratio < 1 / 1) {
+
   .detail-backdrop {
     inset: 0;
     width: auto;
     height: auto;
     opacity: 1;
-    filter: blur(10px);
-    transform: scale(1.08);
+    filter: blur(2.1px);
+    transform: scale(1.02);
   }
 
   .detail-backdrop img {
-    opacity: 1;
+    opacity: 0;
+  }
+
+  .detail-backdrop img.managed-image.is-loaded {
+    opacity: 0.2;
   }
 
   .detail-backdrop::after {
-    position: absolute;
-    inset: 0;
-    content: "";
-    background: rgba(35, 24, 18, 0.9);
+    display: none;
   }
 
   .detail-hero {
@@ -2950,16 +3162,11 @@ button:focus-visible {
   }
 
   .detail-back {
-    gap: 6px;
+    gap: 0;
     padding: 0;
     color: #f7e3cc;
     font-size: 14px;
     letter-spacing: 0;
-  }
-
-  .detail-back img {
-    display: block;
-    width: 12px;
   }
 
   .detail-school {
@@ -3078,27 +3285,24 @@ button:focus-visible {
 
   .ui-toggle-button {
     top: 54px;
-    right: 112px;
+    right: 107px;
     bottom: auto;
-    height: 40px;
-    gap: 8px;
-    padding: 0 14px;
-    border: 0;
-    border-radius: 24px;
-    background: rgba(0, 0, 0, 0.3);
+    width: auto;
+    min-width: 0;
+    height: 34px;
+    gap: 7px;
+    padding: 0 12px;
+    border: 1px solid rgba(247, 227, 204, 0.28);
+    border-radius: 999px;
+    background: rgba(27, 16, 10, 0.62);
     color: #f7e3cc;
-    font: 13px/1 "Marcellus SC", serif;
-    backdrop-filter: blur(6px);
+    font: 11px/1 "Gowun Dodum", sans-serif;
+    backdrop-filter: blur(7px);
   }
 
   .ui-toggle-button > img:first-child {
-    width: 18px;
-    height: 18px;
-  }
-
-  .ui-toggle-button > img:last-child {
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
   }
 
   .orientation-toggle-button {
@@ -3215,19 +3419,20 @@ body.detail-landscape {
   width: auto;
   height: auto;
   opacity: 1;
-  filter: blur(10px);
-  transform: scale(1.08);
+  filter: blur(2.1px);
+  transform: scale(1.02);
 }
 
 .detail-view.landscape-mode .detail-backdrop img {
-  opacity: 1;
+  opacity: 0;
+}
+
+.detail-view.landscape-mode .detail-backdrop img.managed-image.is-loaded {
+  opacity: 0.2;
 }
 
 .detail-view.landscape-mode .detail-backdrop::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-  background: rgba(35, 24, 18, 0.9);
+  display: none;
 }
 
 .detail-view.landscape-mode .detail-hero,
@@ -3367,8 +3572,11 @@ body.detail-landscape {
   }
 
   .view-entering,
-  .view-leaving {
+  .view-leaving,
+  .shelf-view.shelf-animating .shelf-decoration,
+  .detail-view.detail-animating .detail-hero-image.managed-image.is-loaded {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
   }
 
 }

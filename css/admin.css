@@ -1179,7 +1179,7 @@ tr.selected .row-actions {
   box-shadow: none;
   color: #ffffff;
   cursor: grab;
-  font: 500 1.167cqw/normal "Hamlet", serif;
+  font: 500 1.167cqw/normal "Hahmlet", serif;
   text-shadow: 0 0 0.667cqw rgba(255, 255, 255, 0.5);
   user-select: none;
   backdrop-filter: blur(0.164cqw);
@@ -1198,6 +1198,9 @@ tr.selected .row-actions {
   overflow-wrap: anywhere;
   white-space: normal;
   -webkit-text-fill-color: #ffffff;
+  text-shadow:
+    0 0 0.267cqw rgba(0, 0, 0, 0.3),
+    0 0 0.667cqw rgba(255, 255, 255, 0.42);
 }
 
 .preview-bubble:active {
@@ -1569,6 +1572,47 @@ tr.selected .row-actions {
   color: #705846;
   font-size: 10px;
   font-weight: 600;
+}
+
+.bgm-copyright-field {
+  display: block;
+  margin-top: 20px;
+}
+
+.bgm-copyright-field > span {
+  display: block;
+  margin-bottom: 9px;
+  color: #62534a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.bgm-copyright-field textarea {
+  display: block;
+  width: 100%;
+  min-height: 112px;
+  padding: 12px 14px;
+  resize: vertical;
+  border: 1px solid #d6c7b8;
+  border-radius: 10px;
+  outline: 0;
+  background: #fffdf9;
+  color: #4f4037;
+  font: 12px/1.6 "Instrument Sans", sans-serif;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.bgm-copyright-field textarea:focus {
+  border-color: #a9825f;
+  box-shadow: 0 0 0 3px rgba(169, 130, 95, 0.12);
+}
+
+.bgm-copyright-field small {
+  display: block;
+  margin-top: 7px;
+  color: #96877e;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .bgm-admin-preview {

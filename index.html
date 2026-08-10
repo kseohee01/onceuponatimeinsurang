@@ -9,10 +9,10 @@
   <title>Once Upon a Time in Surang</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Fredericka+the+Great&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Hamlet:wght@400;500;600;700&family=Inknut+Antiqua:wght@400&family=Instrument+Sans:wght@400;500;600&family=Marcellus+SC&family=Nanum+Myeongjo:wght@400;700;800&family=Rochester&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Fredericka+the+Great&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Hahmlet:wght@400;500;600;700&family=Inknut+Antiqua:wght@400&family=Instrument+Sans:wght@400;500;600&family=Marcellus+SC&family=Nanum+Myeongjo:wght@400;700;800&family=Rochester&display=swap" rel="stylesheet">
   <!-- Cute Spinning Flower Tan cursor by Cursors-4U. -->
   <link rel="stylesheet" href="https://cdn.cursors-4u.net/cursors/animated/cute-spinning-flower-tan-517a3242-32.css">
-  <link rel="stylesheet" href="css/index.css?v=84">
+  <link rel="stylesheet" href="css/index.css?v=113">
 </head>
 <body data-color-mode="fixed-light">
   <audio id="site-bgm-audio" loop autoplay preload="auto"></audio>
@@ -133,7 +133,7 @@
         <img class="popup-paper-image" src="assets/figma/popup-paper-texture.jpg" alt="" aria-hidden="true">
         <div class="popup-cover-frame">
           <picture class="popup-cover-ornament" aria-hidden="true">
-            <source media="(max-aspect-ratio: 1 / 1)" srcset="assets/figma/popup-cover-back-mobile-latest.svg">
+            <source media="(aspect-ratio < 4 / 5)" srcset="assets/figma/popup-cover-back-mobile-latest.svg">
             <img src="assets/figma/popup-cover-back-pc.svg" alt="">
           </picture>
           <div class="popup-cover">
@@ -143,12 +143,12 @@
           </div>
           <div class="popup-concept-banner" aria-hidden="true">
             <picture class="popup-concept-ribbon">
-              <source media="(max-aspect-ratio: 1 / 1)" srcset="assets/figma/popup-concept-ribbon-mobile.svg">
+              <source media="(aspect-ratio < 4 / 5)" srcset="assets/figma/popup-concept-ribbon-mobile.svg">
               <img src="assets/figma/popup-concept-ribbon-pc.svg" alt="">
             </picture>
             <p id="popup-project-label-banner" class="popup-project-label"></p>
             <picture class="popup-concept-star">
-              <source media="(max-aspect-ratio: 1 / 1)" srcset="assets/figma/popup-concept-star-mobile.svg">
+              <source media="(aspect-ratio < 4 / 5)" srcset="assets/figma/popup-concept-star-mobile.svg">
               <img src="assets/figma/popup-concept-star-pc.svg" alt="">
             </picture>
           </div>
@@ -158,13 +158,13 @@
       <div class="popup-page popup-page-right">
         <img class="popup-paper-image" src="assets/figma/popup-paper-texture.jpg" alt="" aria-hidden="true">
         <button id="btn-close-popup" class="popup-close" type="button" aria-label="팝업 닫기">
-          <img src="assets/figma/x-circle.svg" alt="">
+          <img src="assets/figma/x-circle.svg?v=2" alt="">
         </button>
         <div class="popup-copy">
           <p id="popup-characters-row" class="popup-characters">캐릭터 이름 X 캐릭터 이름</p>
           <p id="popup-book-subtitle" class="popup-english"><span class="popup-english-track">The Secret Garden</span></p>
           <h2 id="popup-book-title" class="popup-title">비밀의 화원</h2>
-          <img class="popup-divider" src="assets/figma/popup-divider.svg" alt="">
+          <img class="popup-divider" src="assets/figma/popup-divider-long.svg" alt="">
           <p id="popup-book-desc" class="popup-description"></p>
           <button id="btn-read-more" class="open-story-button" type="button">
             <span>OPEN</span>
@@ -180,7 +180,6 @@
     <div id="detail-backdrop" class="detail-backdrop" aria-hidden="true">
       <img id="detail-backdrop-img" class="managed-image" alt="">
     </div>
-    <img class="rose-overlay" src="assets/figma/dust-particles.svg" alt="" aria-hidden="true">
     <canvas class="ambient-particle-canvas" aria-hidden="true"></canvas>
     <div id="detail-hero" class="detail-hero">
       <img id="detail-bg-img" class="detail-hero-image managed-image" alt="">
@@ -190,7 +189,6 @@
     <div id="detail-ui-layer" class="detail-ui-layer">
       <header class="detail-header">
         <button id="btn-back-to-shelf" class="detail-back" type="button">
-          <img src="assets/figma/arrow-right.svg" alt="">
           <span>BACK</span>
         </button>
         <button class="site-bgm-widget" type="button" aria-label="BGM 재생" aria-pressed="false">
@@ -211,10 +209,9 @@
       </div>
     </div>
 
-    <button id="btn-ui-toggle" class="ui-toggle-button" type="button" aria-pressed="true">
+    <button id="btn-ui-toggle" class="ui-toggle-button" type="button" aria-label="UI 숨기기" aria-pressed="true">
       <img src="assets/figma/eye.svg" alt="">
       <span>UI</span>
-      <img id="ui-toggle-switch" src="assets/figma/toggle-switch.svg" alt="">
     </button>
     <button id="btn-orientation-toggle" class="orientation-toggle-button" type="button" aria-pressed="false">
       <span class="orientation-icon" aria-hidden="true"></span>
@@ -223,7 +220,7 @@
   </section>
 
   <script src="js/firebase-config.js?v=1"></script>
-  <script src="js/db.js?v=8"></script>
-  <script src="js/index.js?v=52"></script>
+  <script src="js/db.js?v=9"></script>
+  <script src="js/index.js?v=62"></script>
 </body>
 </html>

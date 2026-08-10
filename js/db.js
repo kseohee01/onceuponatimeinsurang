@@ -4,6 +4,9 @@ const SITE_SETTINGS_KEY = 'surang_site_settings_v1';
 const SITE_ASSET_DB_NAME = 'surang_site_assets_v1';
 const SITE_ASSET_STORE = 'assets';
 const HOMEPAGE_BGM_ASSET_KEY = 'homepage-bgm';
+const DEFAULT_BGM_COPYRIGHT = `Music from #Uppbeat (free for Creators!):
+https://uppbeat.io/t/vocalista/sweet-lullaby
+License code: UFTCIOKHK9ASDJ43`;
 const LEGACY_SERVER_STATE_ENDPOINT = '/api/state';
 const LEGACY_SERVER_BGM_ENDPOINT = '/api/bgm';
 const BOOKS_UPDATED_EVENT = 'surang:books-updated';
@@ -70,6 +73,7 @@ let cloudAvailable = false;
 let cloudInitialized = false;
 let cloudStateUpdatedAt = 0;
 let cloudBgm = null;
+let cloudBgmCopyright = DEFAULT_BGM_COPYRIGHT;
 let cloudUnsubscribe = null;
 let cloudServicesPromise = null;
 let remoteWriteQueue = Promise.resolve();
@@ -79,6 +83,10 @@ function clone(value) {
 }
 
 function cleanText(value, fallback = '') {
+  return typeof value === 'string' && !value.includes('�') ? value.trim() : fallback;
+}
+
+function normalizeBgmCopyright(value, fallback = DEFAULT_BGM_COPYRIGHT) {
   return typeof value === 'string' && !value.includes('�') ? value.trim() : fallback;
 }
 
@@ -368,6 +376,7 @@ function toCloudState(data) {
     initialized: Boolean(data?.initialized),
     books: Array.isArray(data?.books) ? data.books : [],
     bgm: data?.bgm && typeof data.bgm === 'object' ? data.bgm : null,
+    bgmCopyright: normalizeBgmCopyright(data?.bgmCopyright),
     updatedAt: Number(data?.updatedAt) || 0
   };
 }
@@ -377,6 +386,7 @@ function applyCloudState(state, notify = true) {
   cloudInitialized = Boolean(state?.initialized);
   cloudStateUpdatedAt = Number(state?.updatedAt) || 0;
   cloudBgm = state?.bgm && typeof state.bgm === 'object' ? state.bgm : null;
+  cloudBgmCopyright = normalizeBgmCopyright(state?.bgmCopyright);
 
   if (!cloudInitialized) return;
 
@@ -390,7 +400,8 @@ function applyCloudState(state, notify = true) {
   const currentSettings = getSiteSettings();
   const nextSettings = {
     bgmName: cloudBgm?.name || '',
-    bgmUpdatedAt: Number(cloudBgm?.updatedAt) || 0
+    bgmUpdatedAt: Number(cloudBgm?.updatedAt) || 0,
+    bgmCopyright: cloudBgmCopyright
   };
   localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(nextSettings));
 
@@ -399,7 +410,11 @@ function applyCloudState(state, notify = true) {
   }
   if (
     notify &&
-    (currentSettings.bgmName !== nextSettings.bgmName || currentSettings.bgmUpdatedAt !== nextSettings.bgmUpdatedAt)
+    (
+      currentSettings.bgmName !== nextSettings.bgmName ||
+      currentSettings.bgmUpdatedAt !== nextSettings.bgmUpdatedAt ||
+      currentSettings.bgmCopyright !== nextSettings.bgmCopyright
+    )
   ) {
     window.dispatchEvent(new CustomEvent('surang:site-settings', { detail: nextSettings }));
   }
@@ -559,6 +574,7 @@ async function initializeSurangData({ allowLocalSeed = false } = {}) {
       initialized: true,
       books,
       bgm,
+      bgmCopyright: DEFAULT_BGM_COPYRIGHT,
       updatedAt: Date.now()
     };
     await services.firestore.setDoc(cloudContentReference(services), initializedState);
@@ -587,6 +603,7 @@ function queueCloudBooksWrite(books) {
         initialized: true,
         books: uploadedBooks,
         bgm: cloudBgm,
+        bgmCopyright: cloudBgmCopyright,
         updatedAt: Date.now()
       };
       await services.firestore.setDoc(cloudContentReference(services), state);
@@ -778,12 +795,17 @@ function subscribeBooks(listener) {
 }
 
 function getSiteSettings() {
-  const fallback = { bgmName: '', bgmUpdatedAt: 0 };
+  const fallback = {
+    bgmName: '',
+    bgmUpdatedAt: 0,
+    bgmCopyright: DEFAULT_BGM_COPYRIGHT
+  };
   try {
     const stored = JSON.parse(localStorage.getItem(SITE_SETTINGS_KEY) || '{}');
     return {
       bgmName: cleanText(stored.bgmName),
-      bgmUpdatedAt: Number(stored.bgmUpdatedAt) || 0
+      bgmUpdatedAt: Number(stored.bgmUpdatedAt) || 0,
+      bgmCopyright: normalizeBgmCopyright(stored.bgmCopyright)
     };
   } catch (error) {
     console.warn('홈페이지 설정을 읽지 못했습니다.', error);
@@ -792,11 +814,15 @@ function getSiteSettings() {
 }
 
 function writeSiteSettings(settings) {
+  const current = getSiteSettings();
   const next = {
-    ...getSiteSettings(),
-    ...settings,
-    bgmUpdatedAt: Date.now()
+    ...current,
+    ...settings
   };
+  next.bgmCopyright = normalizeBgmCopyright(next.bgmCopyright);
+  next.bgmUpdatedAt = Object.prototype.hasOwnProperty.call(settings, 'bgmName')
+    ? Date.now()
+    : current.bgmUpdatedAt;
   localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(next));
   window.dispatchEvent(new CustomEvent('surang:site-settings', { detail: next }));
   return next;
@@ -869,14 +895,37 @@ async function saveHomepageBgm(file) {
   return writeSiteSettings({ bgmName: file.name });
 }
 
+async function saveHomepageBgmCopyright(value) {
+  const bgmCopyright = normalizeBgmCopyright(value, '');
+  if (cloudAvailable && cloudInitialized) {
+    const services = await getCloudServices();
+    await services.firestore.setDoc(cloudContentReference(services), {
+      version: 1,
+      initialized: true,
+      bgmCopyright,
+      updatedAt: Date.now()
+    }, { merge: true });
+    cloudBgmCopyright = bgmCopyright;
+  }
+  return writeSiteSettings({ bgmCopyright });
+}
+
 async function getHomepageBgm() {
   if (cloudAvailable && cloudInitialized) {
-    if (!cloudBgm?.url) return { bgmName: '', bgmUpdatedAt: 0, blob: null };
+    if (!cloudBgm?.url) {
+      return {
+        bgmName: '',
+        bgmUpdatedAt: 0,
+        bgmCopyright: cloudBgmCopyright,
+        blob: null
+      };
+    }
     const response = await fetch(cloudBgm.url);
     if (!response.ok) throw new Error(`BGM 파일 요청 실패 (${response.status})`);
     return {
       bgmName: cloudBgm.name || '',
       bgmUpdatedAt: Number(cloudBgm.updatedAt) || 0,
+      bgmCopyright: cloudBgmCopyright,
       blob: await response.blob()
     };
   }
