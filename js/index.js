@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('popup-project-label').textContent = conceptLabel;
     document.getElementById('popup-project-label-banner').textContent = conceptLabel;
     document.getElementById('popup-characters-row').textContent =
-      (book.participatingCharacters || []).slice(0, 3).join('  X  ') || '캐릭터 이름 X 캐릭터 이름';
+      (book.participatingCharacters || []).join('  X  ') || '캐릭터 이름 X 캐릭터 이름';
     document.querySelector('#popup-book-subtitle .popup-english-track').textContent =
       book.subtitle || 'Once Upon a Time';
     document.getElementById('popup-book-title').textContent = book.title;
@@ -289,12 +289,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updatePopupTypography() {
     const subtitle = document.getElementById('popup-book-subtitle');
     const subtitleTrack = subtitle.querySelector('.popup-english-track');
+    const characters = document.getElementById('popup-characters-row');
     const title = document.getElementById('popup-book-title');
 
     subtitle.classList.remove('is-overflowing');
     subtitle.style.removeProperty('--popup-subtitle-shift');
     subtitle.style.removeProperty('--popup-subtitle-duration');
+    characters.style.removeProperty('font-size');
     title.style.removeProperty('font-size');
+
+    const charactersBaseSize = Number.parseFloat(getComputedStyle(characters).fontSize) || 12;
+    if (characters.scrollWidth > characters.clientWidth) {
+      const fittedSize = Math.max(
+        8,
+        Math.floor(charactersBaseSize * characters.clientWidth / characters.scrollWidth * 10) / 10
+      );
+      characters.style.fontSize = `${fittedSize}px`;
+    }
 
     const titleBaseSize = Number.parseFloat(getComputedStyle(title).fontSize) || 36;
     if (title.scrollWidth > title.clientWidth) {
