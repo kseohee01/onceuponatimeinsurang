@@ -1896,7 +1896,7 @@ button:focus-visible {
   background: none;
   color: #ffffff;
   overflow-wrap: anywhere;
-  white-space: normal;
+  white-space: pre-wrap;
   -webkit-text-fill-color: #ffffff;
   text-shadow:
     0 0 0.32cqw rgba(0, 0, 0, 0.3),
