@@ -1667,7 +1667,7 @@ button:focus-visible {
   overflow-x: hidden;
   overflow-y: auto;
   color: #8f6348;
-  font: 15px/1.6 "Gowun Dodum", sans-serif;
+  font: 17px/1.6 "Gwendolyn", "Gowun Dodum", cursive;
   text-shadow: 0 0 4px rgba(143, 99, 72, 0.25);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -2105,7 +2105,7 @@ button:focus-visible {
   overflow-x: hidden;
   overflow-y: auto;
   color: #f7e3cc;
-  font: 15px/1.6 "Gowun Dodum", sans-serif;
+  font: 17px/1.6 "Gwendolyn", "Gowun Dodum", cursive;
   text-shadow: 0 0 4px rgba(143, 99, 72, 0.25);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -3064,7 +3064,7 @@ button:focus-visible {
     padding-right: 0;
     overflow: hidden;
     color: #8f6348;
-    font: 15px/1.6 "Gowun Dodum", sans-serif;
+    font: 17px/1.6 "Gwendolyn", "Gowun Dodum", cursive;
     text-overflow: ellipsis;
     text-shadow: 0 0 4px rgba(143, 99, 72, 0.25);
     white-space: normal;
@@ -3277,7 +3277,7 @@ button:focus-visible {
     overflow-x: hidden;
     overflow-y: auto;
     color: #f7e3cc;
-    font: 13px/1.6 "Gowun Dodum", sans-serif;
+    font: 15px/1.6 "Gwendolyn", "Gowun Dodum", cursive;
     text-overflow: clip;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
