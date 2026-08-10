@@ -647,8 +647,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     setManagedImage(detailImage, image);
     setManagedImage(backdropImage, image);
 
-    document.getElementById('detail-gradient-overlay').style.removeProperty('background');
-
     document.getElementById('detail-characters').textContent =
       (book.participatingCharacters || []).join('  X  ');
     document.getElementById('detail-subtitle').textContent = book.subtitle || '';
