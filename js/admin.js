@@ -804,8 +804,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function refreshBgmSettings() {
     try {
-      const settings = getSiteSettings();
-      field('bgm-copyright').value = settings.bgmCopyright || '';
       const bgm = await getHomepageBgm();
       if (!pendingBgmFile) setBgmPreview(bgm.blob, bgm.bgmName);
     } catch (error) {
@@ -827,17 +825,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   field('save-bgm-button').addEventListener('click', async () => {
-    const copyright = field('bgm-copyright').value.trim();
-    const copyrightChanged = copyright !== (getSiteSettings().bgmCopyright || '');
-    if (!pendingBgmFile && !copyrightChanged) {
+    if (!pendingBgmFile) {
       showToast('변경된 BGM 설정이 없습니다.');
       return;
     }
     const button = field('save-bgm-button');
     button.disabled = true;
     try {
-      if (pendingBgmFile) await saveHomepageBgm(pendingBgmFile);
-      await saveHomepageBgmCopyright(copyright);
+      await saveHomepageBgm(pendingBgmFile);
       pendingBgmFile = null;
       field('bgm-upload').value = '';
       await refreshBgmSettings();

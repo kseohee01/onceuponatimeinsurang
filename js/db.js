@@ -73,7 +73,6 @@ let cloudAvailable = false;
 let cloudInitialized = false;
 let cloudStateUpdatedAt = 0;
 let cloudBgm = null;
-let cloudBgmCopyright = DEFAULT_BGM_COPYRIGHT;
 let cloudUnsubscribe = null;
 let cloudServicesPromise = null;
 let remoteWriteQueue = Promise.resolve();
@@ -83,10 +82,6 @@ function clone(value) {
 }
 
 function cleanText(value, fallback = '') {
-  return typeof value === 'string' && !value.includes('�') ? value.trim() : fallback;
-}
-
-function normalizeBgmCopyright(value, fallback = DEFAULT_BGM_COPYRIGHT) {
   return typeof value === 'string' && !value.includes('�') ? value.trim() : fallback;
 }
 
@@ -376,7 +371,6 @@ function toCloudState(data) {
     initialized: Boolean(data?.initialized),
     books: Array.isArray(data?.books) ? data.books : [],
     bgm: data?.bgm && typeof data.bgm === 'object' ? data.bgm : null,
-    bgmCopyright: normalizeBgmCopyright(data?.bgmCopyright),
     updatedAt: Number(data?.updatedAt) || 0
   };
 }
@@ -386,7 +380,6 @@ function applyCloudState(state, notify = true) {
   cloudInitialized = Boolean(state?.initialized);
   cloudStateUpdatedAt = Number(state?.updatedAt) || 0;
   cloudBgm = state?.bgm && typeof state.bgm === 'object' ? state.bgm : null;
-  cloudBgmCopyright = normalizeBgmCopyright(state?.bgmCopyright);
 
   if (!cloudInitialized) return;
 
@@ -401,7 +394,7 @@ function applyCloudState(state, notify = true) {
   const nextSettings = {
     bgmName: cloudBgm?.name || '',
     bgmUpdatedAt: Number(cloudBgm?.updatedAt) || 0,
-    bgmCopyright: cloudBgmCopyright
+    bgmCopyright: DEFAULT_BGM_COPYRIGHT
   };
   localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(nextSettings));
 
@@ -412,8 +405,7 @@ function applyCloudState(state, notify = true) {
     notify &&
     (
       currentSettings.bgmName !== nextSettings.bgmName ||
-      currentSettings.bgmUpdatedAt !== nextSettings.bgmUpdatedAt ||
-      currentSettings.bgmCopyright !== nextSettings.bgmCopyright
+      currentSettings.bgmUpdatedAt !== nextSettings.bgmUpdatedAt
     )
   ) {
     window.dispatchEvent(new CustomEvent('surang:site-settings', { detail: nextSettings }));
@@ -574,7 +566,6 @@ async function initializeSurangData({ allowLocalSeed = false } = {}) {
       initialized: true,
       books,
       bgm,
-      bgmCopyright: DEFAULT_BGM_COPYRIGHT,
       updatedAt: Date.now()
     };
     await services.firestore.setDoc(cloudContentReference(services), initializedState);
@@ -603,7 +594,6 @@ function queueCloudBooksWrite(books) {
         initialized: true,
         books: uploadedBooks,
         bgm: cloudBgm,
-        bgmCopyright: cloudBgmCopyright,
         updatedAt: Date.now()
       };
       await services.firestore.setDoc(cloudContentReference(services), state);
@@ -805,7 +795,7 @@ function getSiteSettings() {
     return {
       bgmName: cleanText(stored.bgmName),
       bgmUpdatedAt: Number(stored.bgmUpdatedAt) || 0,
-      bgmCopyright: normalizeBgmCopyright(stored.bgmCopyright)
+      bgmCopyright: DEFAULT_BGM_COPYRIGHT
     };
   } catch (error) {
     console.warn('홈페이지 설정을 읽지 못했습니다.', error);
@@ -819,7 +809,7 @@ function writeSiteSettings(settings) {
     ...current,
     ...settings
   };
-  next.bgmCopyright = normalizeBgmCopyright(next.bgmCopyright);
+  next.bgmCopyright = DEFAULT_BGM_COPYRIGHT;
   next.bgmUpdatedAt = Object.prototype.hasOwnProperty.call(settings, 'bgmName')
     ? Date.now()
     : current.bgmUpdatedAt;
@@ -895,37 +885,27 @@ async function saveHomepageBgm(file) {
   return writeSiteSettings({ bgmName: file.name });
 }
 
-async function saveHomepageBgmCopyright(value) {
-  const bgmCopyright = normalizeBgmCopyright(value, '');
-  if (cloudAvailable && cloudInitialized) {
-    const services = await getCloudServices();
-    await services.firestore.setDoc(cloudContentReference(services), {
-      version: 1,
-      initialized: true,
-      bgmCopyright,
-      updatedAt: Date.now()
-    }, { merge: true });
-    cloudBgmCopyright = bgmCopyright;
-  }
-  return writeSiteSettings({ bgmCopyright });
-}
-
-async function getHomepageBgm() {
+async function getHomepageBgm({ stream = false } = {}) {
   if (cloudAvailable && cloudInitialized) {
     if (!cloudBgm?.url) {
       return {
         bgmName: '',
         bgmUpdatedAt: 0,
-        bgmCopyright: cloudBgmCopyright,
+        bgmCopyright: DEFAULT_BGM_COPYRIGHT,
         blob: null
       };
     }
+    const metadata = {
+      bgmName: cloudBgm.name || '',
+      bgmUpdatedAt: Number(cloudBgm.updatedAt) || 0,
+      bgmCopyright: DEFAULT_BGM_COPYRIGHT
+    };
+    if (stream) return { ...metadata, url: cloudBgm.url, blob: null };
+
     const response = await fetch(cloudBgm.url);
     if (!response.ok) throw new Error(`BGM 파일 요청 실패 (${response.status})`);
     return {
-      bgmName: cloudBgm.name || '',
-      bgmUpdatedAt: Number(cloudBgm.updatedAt) || 0,
-      bgmCopyright: cloudBgmCopyright,
+      ...metadata,
       blob: await response.blob()
     };
   }

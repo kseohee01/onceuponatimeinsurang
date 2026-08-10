@@ -797,7 +797,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const sequence = ++bgmLoadSequence;
     try {
-      const bgm = await getHomepageBgm();
+      const bgm = await getHomepageBgm({ stream: true });
       if (sequence !== bgmLoadSequence) return;
       updateBgmCopyright(bgm.bgmCopyright);
 
@@ -809,15 +809,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       bgmObjectUrl = '';
       bgmName = loadedName;
       bgmUpdatedAt = loadedUpdatedAt;
-      if (!bgm.blob) {
+      if (!bgm.url && !bgm.blob) {
         bgmAutoplayPending = false;
         bgmAudio.removeAttribute('src');
         bgmAudio.load();
         updateBgmWidgets();
         return;
       }
-      bgmObjectUrl = URL.createObjectURL(bgm.blob);
-      bgmAudio.src = bgmObjectUrl;
+      if (bgm.url) {
+        bgmAudio.src = bgm.url;
+      } else {
+        bgmObjectUrl = URL.createObjectURL(bgm.blob);
+        bgmAudio.src = bgmObjectUrl;
+      }
+      bgmAudio.autoplay = true;
       bgmAudio.loop = true;
       bgmAudio.load();
       if (bgmPlayRequested) await tryPlayBgm();
@@ -873,6 +878,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   bgmAudio.addEventListener('play', updateBgmWidgets);
   bgmAudio.addEventListener('pause', updateBgmWidgets);
   bgmAudio.addEventListener('error', updateBgmWidgets);
+  bgmAudio.addEventListener('canplay', () => {
+    if (document.body.dataset.view === 'intro' && bgmPlayRequested && bgmAudio.paused) {
+      tryPlayBgm();
+    }
+  });
   function retryBlockedAutoplay(event) {
     if (event?.target?.closest?.('.site-bgm-widget')) return;
     if (bgmAutoplayPending && bgmPlayRequested && bgmAudio.paused) tryPlayBgm();

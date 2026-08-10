@@ -225,14 +225,10 @@ button:focus-visible {
 .intro-pc-book { top: 70.333%; bottom: auto; left: -16.736%; width: 49.444%; height: 65.778%; }
 .intro-pc-apple { top: 64.222%; bottom: auto; left: 68.472%; width: 48.264%; height: 75%; }
 .intro-pc-window { z-index: 12; top: -10.222%; left: 43.819%; width: 63.194%; height: 81%; mix-blend-mode: plus-lighter; }
-/* Keep the exported butterfly at its Figma-native 148 × 140 size. */
-.intro-pc-butterfly { z-index: 13; top: 4.444%; left: calc(50% - 322px); width: 148px; height: 140px; }
-
 /* Figma's rotated decoration wrappers center their child artwork. */
 .intro-pc-deco-left,
 .intro-pc-deco-right,
 .intro-pc-tulip,
-.intro-pc-butterfly,
 .intro-mobile-deco-left,
 .intro-mobile-deco-right,
 .intro-mobile-tulip {
@@ -430,7 +426,6 @@ button:focus-visible {
 }
 
 .intro-pc-doily,
-.intro-pc-butterfly,
 .intro-pc-window,
 .intro-mobile-doily,
 .intro-mobile-window {
@@ -443,13 +438,6 @@ button:focus-visible {
 
 .intro-view.active .intro-bgm-widget {
   animation: intro-part-settle 650ms 180ms cubic-bezier(0.16, 0.82, 0.23, 1) both;
-}
-
-/* It is an independent layer, but shares the book's gentle vertical motion. */
-.intro-view.active .intro-pc-butterfly {
-  animation:
-    intro-part-settle 900ms cubic-bezier(0.16, 0.82, 0.23, 1) both,
-    intro-book-float 5.5s 850ms ease-in-out infinite;
 }
 
 @keyframes intro-part-settle {
@@ -477,6 +465,22 @@ button:focus-visible {
   border: 0;
   border-radius: 0;
   background: linear-gradient(44.4deg, #664d3f 5.1%, #1b100a 45.74%, #6b4f3b 96.58%);
+}
+
+/* Keep the butterfly in the book's coordinate system. The Figma offset and
+   width are expressed as percentages of the book, so their spacing remains
+   unchanged when the shared intro scale responds to the viewport. */
+.intro-book-butterfly {
+  position: absolute;
+  z-index: 4;
+  top: -11.111%;
+  left: -12.379%;
+  display: block;
+  width: 28.627%;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
 }
 
 .intro-book-canvas {
