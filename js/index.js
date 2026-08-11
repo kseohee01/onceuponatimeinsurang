@@ -35,17 +35,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   let popupCoverPreloadScheduled = false;
   let popupCoverPreloadReschedule = false;
   const popupMobileMedia = window.matchMedia('(aspect-ratio < 4 / 5)');
-  const bookPopupSfxStartOffset = 0.09;
-
-  function playBookPopupSfx() {
+  function playUiClickSfx() {
     bookPopupSfx.pause();
-    try {
-      bookPopupSfx.currentTime = bookPopupSfxStartOffset;
-    } catch {
-      bookPopupSfx.currentTime = 0;
-    }
+    bookPopupSfx.currentTime = 0;
     bookPopupSfx.play().catch(() => {});
   }
+
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target.closest(
+      'button, a, [role="button"], summary, input[type="file"]'
+    ) : null;
+    if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
+    if (target.closest('.site-bgm-widget') || target.closest('audio')) return;
+    playUiClickSfx();
+  }, true);
 
   function dismissBookPopupForNavigation() {
     clearTimeout(popupCloseTimer);
@@ -286,7 +289,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearTimeout(popupCloseTimer);
     modal.classList.remove('closing-fade', 'close-immediate');
     modal.querySelector('.open-book').style.removeProperty('transform');
-    if (!wasOpen) playBookPopupSfx();
     selectedBook = book;
     if (!wasOpen) recordAnalyticsEvent('popupOpens', book.id);
     setManagedImage(document.getElementById('popup-cover-img'), getPopupCoverSource(book));
