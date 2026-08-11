@@ -34,6 +34,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   let popupCoverPreloadScheduled = false;
   let popupCoverPreloadReschedule = false;
   const popupMobileMedia = window.matchMedia('(aspect-ratio < 4 / 5)');
+  const bookPopupSfxStartOffset = 0.09;
+
+  function playBookPopupSfx() {
+    bookPopupSfx.pause();
+    try {
+      bookPopupSfx.currentTime = bookPopupSfxStartOffset;
+    } catch {
+      bookPopupSfx.currentTime = 0;
+    }
+    bookPopupSfx.play().catch(() => {});
+  }
 
   function dismissBookPopupForNavigation() {
     clearTimeout(popupCloseTimer);
@@ -267,6 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearTimeout(popupCloseTimer);
     modal.classList.remove('closing-fade', 'close-immediate');
     modal.querySelector('.open-book').style.removeProperty('transform');
+    if (!wasOpen) playBookPopupSfx();
     selectedBook = book;
     setManagedImage(document.getElementById('popup-cover-img'), getPopupCoverSource(book));
     const conceptLabel = book.concept || '페어명';
@@ -285,10 +297,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (book.detailBgImage) preloadDetailImage(book.detailBgImage);
     updatePopupScale();
     modal.classList.add('open');
-    if (!wasOpen) {
-      bookPopupSfx.currentTime = 0;
-      bookPopupSfx.play().catch(() => {});
-    }
     requestAnimationFrame(updatePopupTypography);
     document.getElementById('btn-close-popup').focus();
   }
