@@ -543,10 +543,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     function createMotes(width, height) {
       const count = width < 768 ? 34 : 60;
       const colors = [
-        [255, 246, 224],
-        [255, 230, 190],
-        [255, 211, 211],
-        [210, 221, 255]
+        [255, 235, 150],
+        [255, 207, 88],
+        [255, 244, 181],
+        [244, 184, 54]
       ];
       return Array.from({ length: count }, () => {
         const mote = {
