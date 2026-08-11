@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const shelfSceneStage = document.querySelector('.shelf-scene-stage');
   const shelfLayoutStage = document.querySelector('.shelf-layout-stage');
   const bgmAudio = document.getElementById('site-bgm-audio');
+  const bookPopupSfx = document.getElementById('book-popup-sfx');
   const bgmWidgets = [...document.querySelectorAll('.site-bgm-widget')];
   const booksPerShelf = 6;
   let selectedBook = null;
@@ -262,6 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openBook(book) {
+    const wasOpen = modal.classList.contains('open');
     clearTimeout(popupCloseTimer);
     modal.classList.remove('closing-fade', 'close-immediate');
     modal.querySelector('.open-book').style.removeProperty('transform');
@@ -283,6 +285,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (book.detailBgImage) preloadDetailImage(book.detailBgImage);
     updatePopupScale();
     modal.classList.add('open');
+    if (!wasOpen) {
+      bookPopupSfx.currentTime = 0;
+      bookPopupSfx.play().catch(() => {});
+    }
     requestAnimationFrame(updatePopupTypography);
     document.getElementById('btn-close-popup').focus();
   }
