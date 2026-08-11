@@ -763,8 +763,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     recordAnalyticsEvent('detailViews', book.id);
     const detailWasActive = views.detail.classList.contains('active');
     selectedBook = book;
-    const image = book.detailBgImage || '';
-    if (image) await preloadDetailImage(image);
+    const image = book.detailBgImage || FIGMA_DETAIL;
+    await preloadDetailImage(image);
     if (renderSequence !== detailRenderSequence || selectedBook?.id !== book.id) return;
     if (!detailWasActive && !modal.classList.contains('open')) return;
     const detailImage = document.getElementById('detail-bg-img');
