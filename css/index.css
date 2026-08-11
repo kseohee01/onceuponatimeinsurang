@@ -3559,9 +3559,7 @@ body.detail-landscape {
 
   .view-entering,
   .view-leaving,
-  .shelf-view.shelf-animating .shelf-decoration,
-  .detail-view.detail-animating .bubble-container,
-  .detail-view.detail-animating .detail-hero-image.managed-image.is-loaded {
+  .detail-view.detail-animating .bubble-container {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
   }
