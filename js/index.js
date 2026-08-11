@@ -313,8 +313,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('popup-project-label-banner').textContent = conceptLabel;
     document.getElementById('popup-characters-row').textContent =
       (book.participatingCharacters || []).join('  X  ') || '캐릭터 이름 X 캐릭터 이름';
-    document.querySelector('#popup-book-subtitle .popup-english-track').textContent =
-      book.subtitle || 'Once Upon a Time';
     document.getElementById('popup-book-title').textContent = book.title;
     const popupDescription = document.getElementById('popup-book-desc');
     const popupDescriptionText =
@@ -434,16 +432,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function updatePopupTypography() {
-    const subtitle = document.getElementById('popup-book-subtitle');
-    const subtitleTrack = subtitle.querySelector('.popup-english-track');
     const characters = document.getElementById('popup-characters-row');
     const title = document.getElementById('popup-book-title');
 
-    subtitle.classList.remove('is-overflowing');
-    subtitle.style.removeProperty('--popup-subtitle-shift');
-    subtitle.style.removeProperty('--popup-subtitle-duration');
-    subtitleTrack.classList.remove('is-looping');
-    subtitleTrack.removeAttribute('data-marquee-text');
     characters.style.removeProperty('font-size');
     title.style.removeProperty('font-size');
 
@@ -460,16 +451,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (title.scrollWidth > title.clientWidth) {
       const fittedSize = Math.max(18, Math.floor(titleBaseSize * title.clientWidth / title.scrollWidth * 10) / 10);
       title.style.fontSize = `${fittedSize}px`;
-    }
-
-    const subtitleOverflow = Math.ceil(subtitleTrack.scrollWidth - subtitle.clientWidth);
-    if (subtitleOverflow > 0) {
-      subtitleTrack.setAttribute('data-marquee-text', subtitleTrack.textContent || '');
-      subtitleTrack.classList.add('is-looping');
-      subtitle.style.setProperty('--popup-subtitle-shift', `${subtitleOverflow}px`);
-      const subtitleRollDuration = Math.min(14, Math.max(7, 5 + subtitleOverflow / 36)) * 2;
-      subtitle.style.setProperty('--popup-subtitle-duration', `${subtitleRollDuration}s`);
-      subtitle.classList.add('is-overflowing');
     }
 
     updatePopupDescriptionOverflow();
@@ -837,7 +818,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('detail-characters').textContent =
       (book.participatingCharacters || []).join('  X  ');
-    document.getElementById('detail-subtitle').textContent = book.subtitle || '';
     const detailTitle = document.getElementById('detail-title');
     const titleText = book.title || '';
     const titleLength = Array.from(titleText).length;

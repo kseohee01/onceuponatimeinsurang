@@ -551,7 +551,6 @@ button:focus-visible {
 
 .intro-edition,
 .intro-title,
-.intro-subtitle,
 .intro-divider,
 .mobile-intro-divider,
 .start-button,
@@ -617,19 +616,6 @@ button:focus-visible {
 .intro-title-large {
   font-size: 80px;
   line-height: 1.05;
-}
-
-.intro-subtitle {
-  min-width: 336px;
-  height: 20px;
-  margin: -8px 0 0;
-  padding: 1px 10px;
-  border-radius: 4px;
-  background: #a8794c;
-  color: #412514;
-  font: 16px/18px "Marcellus SC", serif;
-  text-shadow: 0 0 4px rgba(65, 37, 20, 0.5);
-  white-space: nowrap;
 }
 
 .intro-divider {
@@ -1635,20 +1621,6 @@ button:focus-visible {
   text-shadow: 0 0 2px rgba(143, 99, 72, 0.5);
 }
 
-.popup-english {
-  position: absolute;
-  z-index: 0;
-  top: 50px;
-  right: 48px;
-  left: 51px;
-  margin: 0;
-  overflow: hidden;
-  color: rgba(204, 177, 151, 0.3);
-  font: 48px/normal "Rochester", cursive;
-  white-space: nowrap;
-  filter: blur(1px);
-}
-
 .popup-title {
   position: relative;
   z-index: 1;
@@ -2038,54 +2010,6 @@ button:focus-visible {
   letter-spacing: 0;
   text-shadow: 0 0 2px rgba(143, 99, 72, 0.5);
   text-transform: uppercase;
-}
-
-.detail-subtitle {
-  position: absolute;
-  z-index: 0;
-  /* Figma title lockup: the English line sits 4px above the title line. */
-  top: 2px;
-  right: 0;
-  left: 3px;
-  width: auto;
-  margin: 0;
-  background: linear-gradient(180deg, rgba(250, 188, 129, 0.3), rgba(204, 177, 151, 0.3));
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  font: 48px/normal "Rochester", cursive;
-  filter: blur(1px);
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.popup-english-track {
-  display: inline-flex;
-  align-items: baseline;
-  min-width: max-content;
-  will-change: transform;
-}
-
-.popup-english-track.is-looping::after {
-  display: inline-block;
-  margin-left: 48px;
-  content: attr(data-marquee-text);
-}
-
-.popup-english.is-overflowing .popup-english-track {
-  animation: popup-subtitle-roll var(--popup-subtitle-duration, 8s) linear infinite;
-}
-
-@keyframes popup-subtitle-roll {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    /* Move exactly one copy plus the gap so the repeated text meets the
-       starting position without a visible jump. */
-    transform: translateX(calc(-50% - 24px));
-  }
 }
 
 .detail-title {
@@ -2592,19 +2516,6 @@ button:focus-visible {
     object-fit: fill;
   }
 
-  .intro-subtitle {
-    width: 220px;
-    min-width: 0;
-    height: 20px;
-    margin: 0;
-    padding: 0;
-    border-radius: 4px;
-    font-size: 10.308px;
-    line-height: 20px;
-    letter-spacing: 0;
-    text-shadow: 0 0 2.577px rgba(65, 37, 20, 0.5);
-  }
-
   .mobile-intro-divider {
     display: block;
     width: 140px;
@@ -3048,18 +2959,6 @@ button:focus-visible {
     text-overflow: clip;
   }
 
-  .popup-english {
-    position: absolute;
-    z-index: 0;
-    top: 33px;
-    right: 17px;
-    left: 23px;
-    margin: 0;
-    color: rgba(204, 177, 151, 0.3);
-    font-size: 36px;
-    filter: blur(1px);
-  }
-
   .popup-title {
     position: relative;
     z-index: 1;
@@ -3256,20 +3155,6 @@ button:focus-visible {
     font: 12px/normal "Gowun Dodum", sans-serif;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-  }
-
-  .detail-subtitle {
-    position: absolute;
-    z-index: 0;
-    /* Keep the decorative English line above the Korean title baseline on
-       mobile; the previous 31px offset put it directly through the glyphs. */
-    top: 4px;
-    right: 0;
-    left: 0;
-    margin: 0;
-    color: rgba(204, 177, 151, 0.3);
-    font-size: 32px;
-    filter: blur(1px);
   }
 
   .detail-title {
