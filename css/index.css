@@ -1615,7 +1615,7 @@ button:focus-visible {
 .popup-english {
   position: absolute;
   z-index: 0;
-  top: 54px;
+  top: 50px;
   right: 48px;
   left: 51px;
   margin: 0;
@@ -2013,7 +2013,8 @@ button:focus-visible {
 .detail-subtitle {
   position: absolute;
   z-index: 0;
-  top: 6px;
+  /* Figma title lockup: the English line sits 4px above the title line. */
+  top: 2px;
   right: 0;
   left: 3px;
   width: auto;
@@ -2029,24 +2030,31 @@ button:focus-visible {
 }
 
 .popup-english-track {
-  display: inline-block;
+  display: inline-flex;
+  align-items: baseline;
   min-width: max-content;
   will-change: transform;
 }
 
+.popup-english-track.is-looping::after {
+  display: inline-block;
+  margin-left: 48px;
+  content: attr(data-marquee-text);
+}
+
 .popup-english.is-overflowing .popup-english-track {
-  animation: popup-subtitle-roll var(--popup-subtitle-duration, 8s) ease-in-out infinite alternate;
+  animation: popup-subtitle-roll var(--popup-subtitle-duration, 8s) linear infinite;
 }
 
 @keyframes popup-subtitle-roll {
-  0%,
-  18% {
+  from {
     transform: translateX(0);
   }
 
-  82%,
-  100% {
-    transform: translateX(calc(-1 * var(--popup-subtitle-shift, 0px)));
+  to {
+    /* Move exactly one copy plus the gap so the repeated text meets the
+       starting position without a visible jump. */
+    transform: translateX(calc(-50% - 24px));
   }
 }
 
@@ -2706,16 +2714,20 @@ button:focus-visible {
       calc(844px * 852 / 900),
       calc(100% + 2 * var(--shelf-viewport-extension, 0px) + 2px)
     );
-    height: auto;
-    aspect-ratio: 852 / 900;
-    overflow: visible;
+    /* Keep the wood panel behind the full portrait viewport. The cabinet is
+       deliberately stretched vertically when a tall mobile viewport exceeds
+       the 390x844 design stage, so the rose layer cannot show through below
+       the shelves. */
+    height: max(844px, calc(100dvh / var(--shelf-stage-scale, 1)));
+    aspect-ratio: auto;
+    overflow: hidden;
     transform: translate(-50%, -50%);
   }
 
   .shelf-pc-cabinet img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: fill;
   }
 
   .shelf-decoration {
@@ -2984,10 +2996,14 @@ button:focus-visible {
   }
 
   .popup-characters {
+    display: block;
+    box-sizing: border-box;
     width: calc(100% - 36px);
-    margin: 0;
+    min-height: 22px;
+    margin: 0 0 3px;
+    padding: 2px 0;
     color: #a47d65;
-    font: 12px/normal "Gowun Dodum", sans-serif;
+    font: 12px/18px "Gowun Dodum", sans-serif;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     white-space: nowrap;
@@ -2998,7 +3014,7 @@ button:focus-visible {
   .popup-english {
     position: absolute;
     z-index: 0;
-    top: 26px;
+    top: 33px;
     right: 17px;
     left: 23px;
     margin: 0;
@@ -3208,7 +3224,7 @@ button:focus-visible {
   .detail-subtitle {
     position: absolute;
     z-index: 0;
-    top: 35px;
+    top: 31px;
     right: 15px;
     left: 15px;
     margin: 0;

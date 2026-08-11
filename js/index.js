@@ -201,10 +201,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       Math.min(270, Number(book.spineHeight) || getAutomaticSpineHeight(visualIndex))
     );
     const visualWidth = Math.max(30, Math.min(120, Number(book.spineWidth) || 60));
+    const mobileSpineScale = 5 / 6;
     button.style.setProperty('--spine-height', `${visualHeight}px`);
     button.style.setProperty('--spine-width', `${visualWidth}px`);
-    button.style.setProperty('--mobile-spine-height', `${Math.round(visualHeight * 200 / 270)}px`);
-    button.style.setProperty('--mobile-spine-width', `${Math.round(visualWidth * 5 / 6)}px`);
+    // Keep the desktop spine aspect ratio in mobile while scaling both axes
+    // together. The previous height mapping used a different scale factor,
+    // making mobile books visibly shorter relative to their width.
+    button.style.setProperty('--mobile-spine-height', `${Math.round(visualHeight * mobileSpineScale)}px`);
+    button.style.setProperty('--mobile-spine-width', `${Math.round(visualWidth * mobileSpineScale)}px`);
     const bookRowIndex = Math.floor(visualIndex / booksPerShelf);
     const bookColumnIndex = visualIndex % booksPerShelf;
     button.style.setProperty('--shelf-book-delay', `${90 + bookRowIndex * 140 + bookColumnIndex * 45}ms`);
@@ -295,6 +299,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     subtitle.classList.remove('is-overflowing');
     subtitle.style.removeProperty('--popup-subtitle-shift');
     subtitle.style.removeProperty('--popup-subtitle-duration');
+    subtitleTrack.classList.remove('is-looping');
+    subtitleTrack.removeAttribute('data-marquee-text');
     characters.style.removeProperty('font-size');
     title.style.removeProperty('font-size');
 
@@ -315,6 +321,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const subtitleOverflow = Math.ceil(subtitleTrack.scrollWidth - subtitle.clientWidth);
     if (subtitleOverflow > 0) {
+      subtitleTrack.setAttribute('data-marquee-text', subtitleTrack.textContent || '');
+      subtitleTrack.classList.add('is-looping');
       subtitle.style.setProperty('--popup-subtitle-shift', `${subtitleOverflow}px`);
       subtitle.style.setProperty('--popup-subtitle-duration', `${Math.min(14, Math.max(7, 5 + subtitleOverflow / 36))}s`);
       subtitle.classList.add('is-overflowing');
