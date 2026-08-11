@@ -745,6 +745,30 @@ function updateBook(updatedBook) {
   return books[index];
 }
 
+function reorderBooks(orderedIds) {
+  const books = getBooks();
+  const booksById = new Map(books.map((book) => [book.id, book]));
+  const orderedBooks = [];
+  const includedIds = new Set();
+
+  (Array.isArray(orderedIds) ? orderedIds : []).forEach((id) => {
+    const book = booksById.get(id);
+    if (!book || includedIds.has(id)) return;
+    includedIds.add(id);
+    orderedBooks.push(book);
+  });
+
+  books.forEach((book) => {
+    if (includedIds.has(book.id)) return;
+    orderedBooks.push(book);
+  });
+
+  return saveBooks(orderedBooks.map((book, index) => ({
+    ...book,
+    shelfOrder: index
+  })));
+}
+
 function deleteBook(id) {
   const currentBooks = getBooks();
   const removedBook = currentBooks.find((book) => book.id === id);

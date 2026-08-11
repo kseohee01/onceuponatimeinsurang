@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Hahmlet:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/admin.css?v=22">
+  <link rel="stylesheet" href="css/admin.css?v=23">
 </head>
 <body>
   <div id="admin-toast" class="admin-toast" role="status" aria-live="polite"></div>
@@ -94,10 +94,16 @@
           <h1>책 관리</h1>
           <p>책장의 이야기와 공개 상태를 관리하세요.</p>
         </div>
-        <button id="new-book-button" class="primary-button" type="button">
-          <img src="assets/figma/admin-plus.svg" alt="">
-          <span>새로운 책 등록</span>
-        </button>
+        <div class="admin-header-actions">
+          <button id="book-order-button" class="secondary-button" type="button">
+            <img src="assets/figma/admin-grip.svg" alt="">
+            <span>책장 순서 변경</span>
+          </button>
+          <button id="new-book-button" class="primary-button" type="button">
+            <img src="assets/figma/admin-plus.svg" alt="">
+            <span>새로운 책 등록</span>
+          </button>
+        </div>
       </header>
 
       <div class="dashboard-grid">
@@ -347,8 +353,29 @@
     </main>
   </div>
 
+  <div id="book-order-modal" class="book-order-modal" hidden>
+    <button class="book-order-backdrop" type="button" aria-label="책장 순서 변경 닫기"></button>
+    <section class="book-order-dialog" role="dialog" aria-modal="true" aria-labelledby="book-order-heading">
+      <header class="book-order-header">
+        <div>
+          <p>BOOKSHELF ORDER</p>
+          <h2 id="book-order-heading">책장 순서 변경</h2>
+        </div>
+        <button id="book-order-close" class="book-order-close" type="button" aria-label="책장 순서 변경 닫기">
+          <img src="assets/figma/admin-close.svg" alt="">
+        </button>
+      </header>
+      <p class="book-order-help">책을 드래그하거나 화살표 버튼을 눌러 실제 책장에 표시될 순서를 정해주세요.</p>
+      <ol id="book-order-list" class="book-order-list"></ol>
+      <footer class="book-order-footer">
+        <button id="book-order-cancel" class="secondary-button" type="button">취소</button>
+        <button id="book-order-save" class="primary-button" type="button">순서 저장</button>
+      </footer>
+    </section>
+  </div>
+
   <script src="js/firebase-config.js?v=1"></script>
-  <script src="js/db.js?v=10"></script>
-  <script src="js/admin.js?v=13"></script>
+  <script src="js/db.js?v=11"></script>
+  <script src="js/admin.js?v=14"></script>
 </body>
 </html>

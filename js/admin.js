@@ -29,6 +29,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let selectedQuoteId = null;
   let toastTimer = null;
   let draggedQuoteId = null;
+  let draggedOrderBookId = null;
+  let bookOrderDraft = [];
+  let bookOrderReturnFocus = null;
   let pendingBgmFile = null;
   let bgmPreviewUrl = '';
   let detailPreviewImageSize = { width: BUBBLE_REFERENCE_WIDTH, height: BUBBLE_REFERENCE_HEIGHT };
@@ -99,6 +102,166 @@ document.addEventListener('DOMContentLoaded', async () => {
       const matchesStatus = status === 'all' || book.status === status;
       return matchesQuery && matchesStatus;
     });
+  }
+
+  function normalizeBookOrderDraft() {
+    const books = getBooks();
+    const currentIds = new Set(books.map((book) => book.id));
+    const normalizedIds = bookOrderDraft.filter((id, index, ids) => (
+      currentIds.has(id) && ids.indexOf(id) === index
+    ));
+    books.forEach((book) => {
+      if (!normalizedIds.includes(book.id)) normalizedIds.push(book.id);
+    });
+    bookOrderDraft = normalizedIds;
+    return new Map(books.map((book) => [book.id, book]));
+  }
+
+  function focusBookOrderControl(bookId, direction) {
+    requestAnimationFrame(() => {
+      const item = [...field('book-order-list').children]
+        .find((child) => child.dataset.bookId === bookId);
+      item?.querySelector(`[data-order-direction="${direction}"]`)?.focus();
+    });
+  }
+
+  function moveBookOrder(bookId, offset) {
+    const currentIndex = bookOrderDraft.indexOf(bookId);
+    const nextIndex = currentIndex + offset;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= bookOrderDraft.length) return;
+    [bookOrderDraft[currentIndex], bookOrderDraft[nextIndex]] = [
+      bookOrderDraft[nextIndex],
+      bookOrderDraft[currentIndex]
+    ];
+    renderBookOrderList();
+    focusBookOrderControl(bookId, offset < 0 ? 'up' : 'down');
+  }
+
+  function clearBookOrderDropState() {
+    field('book-order-list').querySelectorAll('.drop-before, .drop-after, .dragging')
+      .forEach((item) => item.classList.remove('drop-before', 'drop-after', 'dragging'));
+  }
+
+  function renderBookOrderList() {
+    const booksById = normalizeBookOrderDraft();
+    const list = field('book-order-list');
+    list.replaceChildren();
+
+    if (!bookOrderDraft.length) {
+      const empty = document.createElement('li');
+      empty.className = 'book-order-empty';
+      empty.textContent = '순서를 변경할 책이 없습니다.';
+      list.appendChild(empty);
+      field('book-order-save').disabled = true;
+      return;
+    }
+
+    field('book-order-save').disabled = false;
+    bookOrderDraft.forEach((bookId, index) => {
+      const book = booksById.get(bookId);
+      if (!book) return;
+
+      const item = document.createElement('li');
+      item.className = 'book-order-item';
+      item.dataset.bookId = book.id;
+      item.draggable = true;
+
+      const grip = document.createElement('span');
+      grip.className = 'book-order-grip';
+      grip.setAttribute('aria-hidden', 'true');
+      grip.innerHTML = '<img src="assets/figma/admin-grip.svg" alt="">';
+
+      const position = document.createElement('span');
+      position.className = 'book-order-position';
+      position.textContent = String(index + 1);
+
+      const thumb = document.createElement('span');
+      thumb.className = 'book-order-thumb';
+      thumb.style.setProperty('--book-color', book.spineColor || '#6d4f3d');
+      if (book.spineImage) thumb.style.backgroundImage = `url("${book.spineImage}")`;
+
+      const copy = document.createElement('span');
+      copy.className = 'book-order-copy';
+      const title = document.createElement('strong');
+      title.textContent = book.title;
+      const subtitle = document.createElement('small');
+      subtitle.textContent = book.subtitle || book.concept || '부제 미등록';
+      copy.append(title, subtitle);
+
+      const controls = document.createElement('span');
+      controls.className = 'book-order-controls';
+      const upButton = document.createElement('button');
+      upButton.type = 'button';
+      upButton.dataset.orderDirection = 'up';
+      upButton.disabled = index === 0;
+      upButton.setAttribute('aria-label', `${book.title} 순서를 위로 이동`);
+      upButton.textContent = '↑';
+      upButton.addEventListener('click', () => moveBookOrder(book.id, -1));
+      const downButton = document.createElement('button');
+      downButton.type = 'button';
+      downButton.dataset.orderDirection = 'down';
+      downButton.disabled = index === bookOrderDraft.length - 1;
+      downButton.setAttribute('aria-label', `${book.title} 순서를 아래로 이동`);
+      downButton.textContent = '↓';
+      downButton.addEventListener('click', () => moveBookOrder(book.id, 1));
+      controls.append(upButton, downButton);
+
+      item.append(grip, position, thumb, copy, controls);
+      item.addEventListener('dragstart', (event) => {
+        if (event.target.closest('button')) {
+          event.preventDefault();
+          return;
+        }
+        draggedOrderBookId = book.id;
+        item.classList.add('dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', book.id);
+      });
+      item.addEventListener('dragover', (event) => {
+        if (!draggedOrderBookId || draggedOrderBookId === book.id) return;
+        event.preventDefault();
+        const insertAfter = event.clientY > item.getBoundingClientRect().top + item.offsetHeight / 2;
+        item.classList.toggle('drop-before', !insertAfter);
+        item.classList.toggle('drop-after', insertAfter);
+      });
+      item.addEventListener('dragleave', () => {
+        item.classList.remove('drop-before', 'drop-after');
+      });
+      item.addEventListener('drop', (event) => {
+        event.preventDefault();
+        const draggedId = draggedOrderBookId || event.dataTransfer.getData('text/plain');
+        if (!draggedId || draggedId === book.id) return;
+        const insertAfter = event.clientY > item.getBoundingClientRect().top + item.offsetHeight / 2;
+        const draggedIndex = bookOrderDraft.indexOf(draggedId);
+        if (draggedIndex < 0) return;
+        bookOrderDraft.splice(draggedIndex, 1);
+        const targetIndex = bookOrderDraft.indexOf(book.id);
+        bookOrderDraft.splice(targetIndex + (insertAfter ? 1 : 0), 0, draggedId);
+        draggedOrderBookId = null;
+        renderBookOrderList();
+      });
+      item.addEventListener('dragend', () => {
+        draggedOrderBookId = null;
+        clearBookOrderDropState();
+      });
+      list.appendChild(item);
+    });
+  }
+
+  function openBookOrderModal() {
+    bookOrderDraft = getBooks().map((book) => book.id);
+    bookOrderReturnFocus = document.activeElement;
+    renderBookOrderList();
+    field('book-order-modal').hidden = false;
+    requestAnimationFrame(() => field('book-order-close').focus());
+  }
+
+  function closeBookOrderModal() {
+    field('book-order-modal').hidden = true;
+    draggedOrderBookId = null;
+    clearBookOrderDropState();
+    if (bookOrderReturnFocus instanceof HTMLElement) bookOrderReturnFocus.focus();
+    bookOrderReturnFocus = null;
   }
 
   function renderDashboard() {
@@ -427,6 +590,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       submitButton.disabled = false;
       bookForm.removeAttribute('aria-busy');
     }
+  });
+
+  field('book-order-button').addEventListener('click', openBookOrderModal);
+  field('book-order-close').addEventListener('click', closeBookOrderModal);
+  field('book-order-cancel').addEventListener('click', closeBookOrderModal);
+  document.querySelector('.book-order-backdrop').addEventListener('click', closeBookOrderModal);
+  field('book-order-save').addEventListener('click', () => {
+    reorderBooks(bookOrderDraft);
+    closeBookOrderModal();
+    renderDashboard();
+    showToast('책장 순서를 저장했습니다. 실제 이야기 책장에도 바로 반영됩니다.');
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !field('book-order-modal').hidden) closeBookOrderModal();
   });
 
   field('new-book-button').addEventListener('click', () => {
