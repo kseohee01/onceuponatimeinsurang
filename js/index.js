@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let toastTimer = null;
   let viewTransitionTimer = null;
   let popupCloseTimer = null;
+  let popupOpeningFrame = 0;
   let bgmObjectUrl = '';
   let bgmName = '';
   let bgmUpdatedAt = 0;
@@ -60,9 +61,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function dismissBookPopupForNavigation() {
     clearTimeout(popupCloseTimer);
+    if (popupOpeningFrame) cancelAnimationFrame(popupOpeningFrame);
+    popupOpeningFrame = 0;
     selectedBook = null;
     modal.classList.add('close-immediate');
-    modal.classList.remove('open', 'closing-fade');
+    modal.classList.remove('open', 'opening', 'closing-fade');
     modal.querySelector('.open-book').style.removeProperty('transform');
     requestAnimationFrame(() => modal.classList.remove('close-immediate'));
   }
@@ -295,6 +298,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   function openBook(book) {
     const wasOpen = modal.classList.contains('open');
     clearTimeout(popupCloseTimer);
+    if (popupOpeningFrame) cancelAnimationFrame(popupOpeningFrame);
+    popupOpeningFrame = 0;
     modal.classList.remove('closing-fade', 'close-immediate');
     modal.querySelector('.open-book').style.removeProperty('transform');
     selectedBook = book;
@@ -318,8 +323,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     popupDescription.textContent = popupDescriptionText;
     if (book.detailBgImage) preloadDetailImage(book.detailBgImage);
     updatePopupScale();
+    // Measure typography while the popup is still hidden so font fitting and
+    // mobile description truncation do not trigger a layout change mid-open.
+    updatePopupTypography();
     modal.classList.add('open');
-    requestAnimationFrame(updatePopupTypography);
+    if (!wasOpen) {
+      // Keep the collapsed state hidden for two frames. This prevents a
+      // single folded-paint frame from appearing before the unfold begins.
+      modal.classList.add('opening');
+      popupOpeningFrame = requestAnimationFrame(() => {
+        popupOpeningFrame = requestAnimationFrame(() => {
+          popupOpeningFrame = 0;
+          modal.classList.remove('opening');
+        });
+      });
+    }
     document.getElementById('btn-close-popup').focus();
   }
 
@@ -484,6 +502,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function closeBook({ animate = false } = {}) {
     if (!modal.classList.contains('open')) return;
     clearTimeout(popupCloseTimer);
+    if (popupOpeningFrame) cancelAnimationFrame(popupOpeningFrame);
+    popupOpeningFrame = 0;
+    modal.classList.remove('opening');
     if (animate) {
       modal.classList.remove('close-immediate');
       modal.classList.add('closing-fade');
@@ -516,7 +537,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const canvasStates = new WeakMap();
     const sunBokehStates = new WeakMap();
     const motionScale = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.35 : 1;
-    const particleTimeScale = 0.5;
+    // Keep the ambient motion perceptible at the 30fps render budget. The
+    // previous 0.5 scale made a mote travel only a few pixels per second.
+    const particleTimeScale = 0.85;
     const renderInterval = 1000 / 30;
     let canvasLayoutVersion = 0;
     let previousTime = performance.now();
@@ -562,7 +585,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function createMotes(width, height) {
-      const count = width < 768 ? 34 : 60;
+      const count = width < 768 ? 26 : 45;
       const colors = [
         [255, 235, 150],
         [255, 207, 88],
@@ -575,11 +598,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           y: Math.random() * height,
           radius: 0.7 + Math.random() * 1.7,
           glow: 4 + Math.random() * 8,
-          speed: 2 + Math.random() * 3,
-          drift: 2 + Math.random() * 7,
+          speed: 28 + Math.random() * 18,
+          drift: 8 + Math.random() * 12,
           alpha: 0.18 + Math.random() * 0.34,
           phase: Math.random() * Math.PI * 2,
           twinkle: 0.5 + Math.random() * 1.5,
+          age: Math.random() * (18 + Math.random() * 10),
+          lifetime: 18 + Math.random() * 10,
+          fadeIn: 1.2 + Math.random() * 1.4,
+          fadeOut: 2 + Math.random() * 1.8,
           color: colors[Math.floor(Math.random() * colors.length)],
           hasRays: Math.random() < 0.18
         };
@@ -682,8 +709,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.globalCompositeOperation = 'lighter';
 
       state.motes.forEach((mote) => {
+        mote.age += delta;
+        if (mote.age >= mote.lifetime) {
+          mote.age = 0;
+          mote.lifetime = 18 + Math.random() * 10;
+          mote.fadeIn = 1.2 + Math.random() * 1.4;
+          mote.fadeOut = 2 + Math.random() * 1.8;
+          mote.speed = 28 + Math.random() * 18;
+          mote.drift = 8 + Math.random() * 12;
+          mote.x = Math.random() * state.width;
+          mote.y = state.height + mote.glow;
+        }
         mote.y -= mote.speed * delta * motionScale * particleTimeScale;
         if (mote.y < -mote.glow) {
+          mote.age = 0;
           mote.y = state.height + mote.glow;
           mote.x = Math.random() * state.width;
         }
@@ -692,7 +731,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const y = mote.y + Math.cos(particleTime * 0.00013 + mote.phase) * 4 * motionScale;
         const cycle = particleTime * 0.001 * Math.PI * 2 / mote.twinkle * motionScale + mote.phase;
         const pulse = 0.16 + Math.pow((Math.sin(cycle) + 1) / 2, 2.4) * 0.84;
-        context.globalAlpha = mote.alpha * (0.3 + pulse * 0.7);
+        const fadeIn = Math.min(1, mote.age / mote.fadeIn);
+        const fadeOut = Math.min(1, (mote.lifetime - mote.age) / mote.fadeOut);
+        const lifeFade = Math.max(0, Math.min(fadeIn, fadeOut));
+        context.globalAlpha = mote.alpha * lifeFade * (0.3 + pulse * 0.7);
         context.drawImage(
           mote.sprite,
           Math.round(x - mote.sprite.width / 2),

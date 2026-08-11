@@ -1320,14 +1320,31 @@ button:focus-visible {
   border: 4px solid #dfba8b;
   border-radius: 8px;
   background: linear-gradient(180deg, #f4ece5, #f8f1eb);
-  filter: drop-shadow(0 28px 45px rgba(0, 0, 0, 0.55));
-  transition: transform 560ms cubic-bezier(0.16, 0.78, 0.24, 1);
+  filter: none;
+  opacity: 0;
+  transition:
+    opacity 180ms ease-out,
+    transform 640ms cubic-bezier(0.16, 0.82, 0.22, 1),
+    filter 420ms ease 700ms;
   will-change: transform;
 }
 
 .modal-overlay.open .open-book {
+  opacity: 1;
+  filter: drop-shadow(0 28px 45px rgba(0, 0, 0, 0.55));
   transform: translate(-50%, -50%) scale(var(--popup-scale, 1)) scaleX(1);
-  animation: popup-book-float 3.2s ease-in-out 700ms infinite alternate;
+  animation: popup-book-float 3.2s ease-in-out 760ms infinite alternate;
+}
+
+/* Do not reveal the collapsed transform itself. Removing this staging class
+   starts the same unfold transition, but only after the hidden state has had
+   a frame to settle. */
+.modal-overlay.open.opening .open-book {
+  visibility: hidden;
+  opacity: 0;
+  filter: none;
+  transform: translate(-50%, -50%) scale(calc(var(--popup-scale, 1) * 0.96)) scaleX(0.12);
+  animation: none;
 }
 
 .modal-overlay:not(.open) {
@@ -1406,6 +1423,14 @@ button:focus-visible {
   transform: perspective(1400px) rotateY(0deg);
 }
 
+.modal-overlay.open.opening .popup-page-left {
+  transform: perspective(1400px) rotateY(82deg);
+}
+
+.modal-overlay.open.opening .popup-page-right {
+  transform: perspective(1400px) rotateY(-82deg);
+}
+
 .popup-gutter {
   position: absolute;
   z-index: 4;
@@ -1427,12 +1452,10 @@ button:focus-visible {
 @keyframes popup-book-float {
   from {
     transform: translateY(0) translate(-50%, -50%) scale(var(--popup-scale, 1)) scaleX(1);
-    filter: drop-shadow(0 28px 45px rgba(0, 0, 0, 0.55));
   }
 
   to {
     transform: translateY(-16px) translate(-50%, -50%) scale(var(--popup-scale, 1)) scaleX(1);
-    filter: drop-shadow(0 40px 58px rgba(0, 0, 0, 0.62));
   }
 }
 
@@ -2835,8 +2858,11 @@ button:focus-visible {
     border-bottom: 0;
     border-radius: 32px 32px 0 0;
     background: #faf5ec;
-    filter: drop-shadow(0 -12px 32px rgba(0, 0, 0, 0.25));
-    transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+    filter: none;
+    transition:
+      opacity 180ms ease-out,
+      transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 320ms ease 560ms;
     scrollbar-width: none;
   }
 
@@ -2850,7 +2876,15 @@ button:focus-visible {
   }
 
   .modal-overlay.open .open-book {
+    filter: drop-shadow(0 -12px 32px rgba(0, 0, 0, 0.25));
     transform: translate(-50%, 0) scale(1);
+    animation: none;
+  }
+
+  .modal-overlay.open.opening .open-book {
+    visibility: hidden;
+    filter: none;
+    transform: translate(-50%, 104%) scale(0.985);
     animation: none;
   }
 
