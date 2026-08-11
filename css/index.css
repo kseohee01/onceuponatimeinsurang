@@ -1601,7 +1601,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 48px;
+  padding: 64px 52px 48px;
   color: #8f6348;
   text-align: left;
 }
@@ -1610,7 +1610,7 @@ button:focus-visible {
   position: relative;
   z-index: 1;
   width: calc(100% - 20px);
-  margin: 0 0 -8px;
+  margin: 0 0 6px;
   color: #a47d65;
   font: 12px/normal "Gowun Dodum", sans-serif;
   letter-spacing: 1.5px;
@@ -1640,7 +1640,7 @@ button:focus-visible {
   width: min(100%, 377.773px);
   height: auto;
   aspect-ratio: 377.773 / 16;
-  margin: 16px 0;
+  margin: 24px 0 30px;
   object-fit: contain;
 }
 
@@ -1986,7 +1986,7 @@ button:focus-visible {
   max-height: calc(100vh - 96px);
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 10px;
   text-shadow: none;
 }
 
@@ -1994,7 +1994,7 @@ button:focus-visible {
   position: relative;
   display: flex;
   width: 100%;
-  min-height: 61px;
+  min-height: 76px;
   flex: 0 0 auto;
   flex-direction: column;
   align-items: flex-start;
@@ -2004,7 +2004,7 @@ button:focus-visible {
 .detail-characters {
   position: relative;
   z-index: 2;
-  margin: 0 0 -8px;
+  margin: 0 0 6px;
   color: #f7e3cc;
   font: 12px/normal "Gowun Dodum", sans-serif;
   letter-spacing: 0;
@@ -2021,7 +2021,7 @@ button:focus-visible {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  font: 700 36px/normal "Gowun Batang", serif;
+  font: 700 36px/1.15 "Gowun Batang", serif;
   text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
   overflow: hidden;
   white-space: nowrap;
@@ -2938,7 +2938,7 @@ button:focus-visible {
     flex-direction: column;
     /* The OPEN button is absolutely positioned, so reserve its full height
        plus a visual gap instead of letting the copy flow underneath it. */
-    padding: 12px 20px 110px;
+    padding: 20px 20px 110px;
     color: #8f6348;
     text-align: left;
   }
@@ -2948,7 +2948,7 @@ button:focus-visible {
     box-sizing: border-box;
     width: calc(100% - 36px);
     min-height: 22px;
-    margin: 0 0 3px;
+    margin: 0 0 8px;
     padding: 2px 0;
     color: #a47d65;
     font: 12px/18px "Gowun Dodum", sans-serif;
@@ -2963,15 +2963,15 @@ button:focus-visible {
     position: relative;
     z-index: 1;
     box-sizing: border-box;
-    min-height: 42px;
+    min-height: 46px;
     margin: 0;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
     background: linear-gradient(0deg, #775a4a, #bc6161 104%);
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
     font-size: 28px;
-    line-height: 1.25;
+    line-height: 1.2;
     overflow: visible;
     text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
     white-space: nowrap;
@@ -2987,7 +2987,7 @@ button:focus-visible {
     flex: 0 0 auto;
     max-width: none;
     max-height: 3.2em;
-    margin: 12px 0 0;
+    margin: 18px 0 0;
     padding-right: 0;
     overflow: hidden;
     color: #8f6348;
@@ -3128,7 +3128,7 @@ button:focus-visible {
     max-height: min(38dvh, 300px);
     min-height: 0;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
     padding: 16px;
     overflow: hidden;
     border: 1px solid rgba(247, 227, 204, 0.2);
@@ -3143,14 +3143,14 @@ button:focus-visible {
     position: relative;
     display: flex;
     width: 100%;
-    min-height: 61px;
-    flex: 0 0 61px;
+    min-height: 78px;
+    flex: 0 0 78px;
     flex-direction: column;
     align-items: flex-start;
   }
 
   .detail-characters {
-    margin: 0;
+    margin: 0 0 8px;
     color: #f7e3cc;
     font: 12px/normal "Gowun Dodum", sans-serif;
     letter-spacing: 1.5px;
@@ -3161,8 +3161,8 @@ button:focus-visible {
     position: relative;
     z-index: 1;
     display: flex;
-    height: 44px;
-    flex: 0 0 44px;
+    height: 48px;
+    flex: 0 0 48px;
     align-items: flex-end;
     margin: 0;
     overflow: hidden;
