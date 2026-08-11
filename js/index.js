@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const shelfLayoutStage = document.querySelector('.shelf-layout-stage');
   const bgmAudio = document.getElementById('site-bgm-audio');
   const bookPopupSfx = document.getElementById('book-popup-sfx');
+  const uiClickSfx = document.getElementById('ui-click-sfx');
   const bgmWidgets = [...document.querySelectorAll('.site-bgm-widget')];
   const booksPerShelf = 6;
   let selectedBook = null;
@@ -36,6 +37,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   let popupCoverPreloadReschedule = false;
   const popupMobileMedia = window.matchMedia('(aspect-ratio < 4 / 5)');
   function playUiClickSfx() {
+    uiClickSfx.pause();
+    uiClickSfx.currentTime = 0;
+    uiClickSfx.play().catch(() => {});
+  }
+
+  function playBookPopupSfx() {
     bookPopupSfx.pause();
     bookPopupSfx.currentTime = 0;
     bookPopupSfx.play().catch(() => {});
@@ -47,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     ) : null;
     if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
     if (target.closest('.site-bgm-widget') || target.closest('audio')) return;
+    if (target.closest('.book-spine')) return;
     playUiClickSfx();
   }, true);
 
@@ -290,7 +298,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     modal.classList.remove('closing-fade', 'close-immediate');
     modal.querySelector('.open-book').style.removeProperty('transform');
     selectedBook = book;
-    if (!wasOpen) recordAnalyticsEvent('popupOpens', book.id);
+    if (!wasOpen) {
+      playBookPopupSfx();
+      recordAnalyticsEvent('popupOpens', book.id);
+    }
     setManagedImage(document.getElementById('popup-cover-img'), getPopupCoverSource(book));
     const conceptLabel = book.concept || '페어명';
     document.getElementById('popup-project-label').textContent = conceptLabel;
