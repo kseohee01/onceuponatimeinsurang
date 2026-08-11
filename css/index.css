@@ -2558,7 +2558,7 @@ button:focus-visible {
 
   .mobile-title-logo {
     position: absolute;
-    top: -3.5px;
+    top: 4.5px;
     left: 50%;
     display: block;
     width: 207px;
