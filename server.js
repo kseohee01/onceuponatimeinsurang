@@ -13,6 +13,7 @@ const BODY_LIMIT = 100 * 1024 * 1024;
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
+  '.cur': 'image/x-icon',
   '.gif': 'image/gif',
   '.html': 'text/html; charset=utf-8',
   '.ico': 'image/x-icon',

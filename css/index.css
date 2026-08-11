@@ -1724,7 +1724,9 @@ button:focus-visible {
   height: 108.667%;
   overflow: hidden;
   opacity: 1;
-  filter: blur(2.1px);
+  /* Keep the ambient image soft enough to separate it from the foreground
+     detail image while preserving the original color and light movement. */
+  filter: blur(4px);
   transform: translate(-50%, -50%);
   background: #000000;
 }
@@ -3106,7 +3108,7 @@ button:focus-visible {
     width: auto;
     height: auto;
     opacity: 1;
-    filter: blur(2.1px);
+    filter: blur(4px);
     transform: scale(1.02);
   }
 
@@ -3225,9 +3227,11 @@ button:focus-visible {
   .detail-subtitle {
     position: absolute;
     z-index: 0;
-    top: 31px;
-    right: 15px;
-    left: 15px;
+    /* Keep the decorative English line above the Korean title baseline on
+       mobile; the previous 31px offset put it directly through the glyphs. */
+    top: 4px;
+    right: 0;
+    left: 0;
     margin: 0;
     color: rgba(204, 177, 151, 0.3);
     font-size: 32px;
@@ -3405,7 +3409,7 @@ body.detail-landscape {
   width: auto;
   height: auto;
   opacity: 1;
-  filter: blur(2.1px);
+  filter: blur(4px);
   transform: scale(1.02);
 }
 
@@ -3564,4 +3568,12 @@ body.detail-landscape {
     animation-delay: 0ms !important;
   }
 
+}
+
+/* Use the supplied cursor consistently across the public site, including
+   interactive controls that previously overrode it with `pointer`. */
+html,
+body,
+body * {
+  cursor: url("../assets/cursor.cur") 0 0, auto !important;
 }
