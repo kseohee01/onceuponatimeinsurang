@@ -126,6 +126,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   function showView(name, { instant = false } = {}) {
     const nextView = views[name];
     const currentView = Object.values(views).find((element) => element.classList.contains('active'));
+    const startViewAnimation = (view, className) => {
+      view.classList.remove(className);
+      void view.offsetWidth;
+      view.classList.add(className);
+    };
     if (instant) {
       clearTimeout(viewTransitionTimer);
       Object.values(views).forEach((element) => {
@@ -159,13 +164,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       views.bookshelf.classList.remove('shelf-animating');
       renderBookshelf();
       schedulePopupCoverPreload();
-      void views.bookshelf.offsetWidth;
-      views.bookshelf.classList.add('shelf-animating');
+      const startShelfAnimation = () => startViewAnimation(views.bookshelf, 'shelf-animating');
+      if (instant) startShelfAnimation();
+      else requestAnimationFrame(() => requestAnimationFrame(startShelfAnimation));
     }
     if (name === 'detail') {
       views.detail.classList.remove('detail-animating');
-      void views.detail.offsetWidth;
-      views.detail.classList.add('detail-animating');
+      const startDetailAnimation = () => startViewAnimation(views.detail, 'detail-animating');
+      if (instant) startDetailAnimation();
+      else requestAnimationFrame(() => requestAnimationFrame(startDetailAnimation));
     }
   }
 

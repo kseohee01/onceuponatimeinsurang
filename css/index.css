@@ -1767,7 +1767,7 @@ button:focus-visible {
 }
 
 .detail-view.detail-animating .detail-hero-image.managed-image.is-loaded {
-  animation: detail-image-horizontal-reveal 960ms cubic-bezier(0.18, 0.78, 0.22, 1) 60ms both;
+  animation: detail-image-horizontal-reveal 960ms cubic-bezier(0.18, 0.78, 0.22, 1) 240ms both;
   will-change: clip-path;
 }
 
