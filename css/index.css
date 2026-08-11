@@ -1947,8 +1947,8 @@ button:focus-visible {
   height: 1cqw;
   content: "";
   background: var(--bubble-background, rgba(39, 39, 39, 0.5));
-  backdrop-filter: blur(0.24cqw);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
+  pointer-events: none;
 }
 
 .story-bubble.tail-L::after {
