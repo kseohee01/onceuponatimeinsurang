@@ -449,7 +449,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       subtitleTrack.setAttribute('data-marquee-text', subtitleTrack.textContent || '');
       subtitleTrack.classList.add('is-looping');
       subtitle.style.setProperty('--popup-subtitle-shift', `${subtitleOverflow}px`);
-      subtitle.style.setProperty('--popup-subtitle-duration', `${Math.min(14, Math.max(7, 5 + subtitleOverflow / 36))}s`);
+      const subtitleRollDuration = Math.min(14, Math.max(7, 5 + subtitleOverflow / 36)) * 2;
+      subtitle.style.setProperty('--popup-subtitle-duration', `${subtitleRollDuration}s`);
       subtitle.classList.add('is-overflowing');
     }
 
