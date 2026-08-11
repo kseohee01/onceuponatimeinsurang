@@ -22,10 +22,78 @@ service cloud.firestore {
 
     match /analytics/{documentId} {
       allow read: if true;
-      allow create, update: if request.resource.data.keys().hasOnly([
-        'date', 'visits', 'uniqueVisitors', 'updatedAt', 'visitorId', 'lastSeenAt',
-        'bookId', 'popupOpens', 'detailViews'
-      ]) && request.resource.data.date is string;
+      allow create: if
+        (
+          documentId.matches('daily_[0-9]{4}-[0-9]{2}-[0-9]{2}') &&
+          request.resource.data.keys().hasOnly([
+            'date', 'visits', 'uniqueVisitors', 'updatedAt'
+          ]) &&
+          request.resource.data.date is string &&
+          request.resource.data.visits == 1 &&
+          request.resource.data.uniqueVisitors in [0, 1] &&
+          request.resource.data.updatedAt is int
+        ) ||
+        (
+          documentId.matches('visitor_[0-9]{4}-[0-9]{2}-[0-9]{2}_.+') &&
+          request.resource.data.keys().hasOnly([
+            'date', 'visitorId', 'lastSeenAt'
+          ]) &&
+          request.resource.data.date is string &&
+          request.resource.data.visitorId is string &&
+          request.resource.data.lastSeenAt is int
+        ) ||
+        (
+          documentId.matches('book_[A-Za-z0-9_-]+') &&
+          request.resource.data.keys().hasOnly([
+            'bookId', 'popupOpens', 'detailViews', 'updatedAt'
+          ]) &&
+          request.resource.data.bookId is string &&
+          request.resource.data.get('popupOpens', 0) in [0, 1] &&
+          request.resource.data.get('detailViews', 0) in [0, 1] &&
+          request.resource.data.get('popupOpens', 0) + request.resource.data.get('detailViews', 0) == 1 &&
+          request.resource.data.updatedAt is int
+        );
+      allow update: if
+        (
+          documentId.matches('daily_[0-9]{4}-[0-9]{2}-[0-9]{2}') &&
+          request.resource.data.keys().hasOnly([
+            'date', 'visits', 'uniqueVisitors', 'updatedAt'
+          ]) &&
+          request.resource.data.date == resource.data.date &&
+          request.resource.data.visits == resource.data.visits + 1 &&
+          (
+            request.resource.data.uniqueVisitors == resource.data.uniqueVisitors ||
+            request.resource.data.uniqueVisitors == resource.data.uniqueVisitors + 1
+          ) &&
+          request.resource.data.updatedAt is int
+        ) ||
+        (
+          documentId.matches('visitor_[0-9]{4}-[0-9]{2}-[0-9]{2}_.+') &&
+          request.resource.data.keys().hasOnly([
+            'date', 'visitorId', 'lastSeenAt'
+          ]) &&
+          request.resource.data.date == resource.data.date &&
+          request.resource.data.visitorId == resource.data.visitorId &&
+          request.resource.data.lastSeenAt is int
+        ) ||
+        (
+          documentId.matches('book_[A-Za-z0-9_-]+') &&
+          request.resource.data.keys().hasOnly([
+            'bookId', 'popupOpens', 'detailViews', 'updatedAt'
+          ]) &&
+          request.resource.data.bookId == resource.data.bookId &&
+          request.resource.data.updatedAt is int &&
+          (
+            (
+              request.resource.data.get('popupOpens', 0) == resource.data.get('popupOpens', 0) + 1 &&
+              request.resource.data.get('detailViews', 0) == resource.data.get('detailViews', 0)
+            ) ||
+            (
+              request.resource.data.get('popupOpens', 0) == resource.data.get('popupOpens', 0) &&
+              request.resource.data.get('detailViews', 0) == resource.data.get('detailViews', 0) + 1
+            )
+          )
+        );
       allow delete: if false;
     }
   }
