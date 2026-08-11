@@ -5,11 +5,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loginView = document.getElementById('login-view');
   const adminShell = document.getElementById('admin-shell');
   const dashboardView = document.getElementById('dashboard-view');
+  const analyticsView = document.getElementById('analytics-view');
   const detailEditorView = document.getElementById('detail-editor-view');
   const settingsView = document.getElementById('settings-view');
   const bookInspector = document.getElementById('book-inspector');
   const bookForm = document.getElementById('book-form');
   const toast = document.getElementById('admin-toast');
+  const analyticsExcludeToggle = document.getElementById('analytics-exclude-toggle');
 
   let currentPage = 1;
   let selectedBookId = null;
@@ -39,6 +41,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const field = (id) => document.getElementById(id);
 
+  async function refreshAnalytics() {
+    const rows = await getAnalyticsStats(30);
+    const totals = rows.reduce((result, row) => ({
+      visits: result.visits + row.visits,
+      uniqueVisitors: result.uniqueVisitors + row.uniqueVisitors
+    }), { visits: 0, uniqueVisitors: 0 });
+    const today = rows[0] || { visits: 0, uniqueVisitors: 0 };
+    field('analytics-today-visits').textContent = today.visits.toLocaleString();
+    field('analytics-today-unique').textContent = today.uniqueVisitors.toLocaleString();
+    field('analytics-period-visits').textContent = totals.visits.toLocaleString();
+    field('analytics-period-unique').textContent = totals.uniqueVisitors.toLocaleString();
+    const bookRows = await getBookAnalytics(getBooks().map((book) => book.id));
+    const booksById = new Map(getBooks().map((book) => [book.id, book]));
+    field('book-analytics-body').replaceChildren(...bookRows
+      .sort((left, right) => (right.popupOpens + right.detailViews) - (left.popupOpens + left.detailViews))
+      .map((row) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${booksById.get(row.bookId)?.title || row.bookId}</td><td>${row.popupOpens.toLocaleString()}</td><td>${row.detailViews.toLocaleString()}</td>`;
+        return tr;
+      }));
+  }
+
   function showToast(message) {
     clearTimeout(toastTimer);
     toast.textContent = message;
@@ -60,6 +84,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (firstBook) loadBookIntoForm(firstBook);
     else resetBookForm();
     refreshBgmSettings();
+    analyticsExcludeToggle.checked = isAnalyticsExcluded();
+    refreshAnalytics();
   }
 
   function closeSession() {
@@ -74,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     event.preventDefault();
     const id = field('login-id').value.trim();
     const password = field('login-password').value;
-    if (['admin', 'manager_clara'].includes(id) && password === 'surang1234') {
+    if (id === 'kdo' && password === 'surang1234') {
       openSession();
       return;
     }
@@ -88,6 +114,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     field('password-toggle').setAttribute('aria-label', visible ? '비밀번호 보기' : '비밀번호 숨기기');
   });
   field('logout-button').addEventListener('click', closeSession);
+  analyticsExcludeToggle.addEventListener('change', () => {
+    setAnalyticsExcluded(analyticsExcludeToggle.checked);
+    showToast(analyticsExcludeToggle.checked
+      ? '이 브라우저의 접속 통계를 제외합니다.'
+      : '이 브라우저의 접속 통계 집계를 다시 시작합니다.');
+  });
 
   function filteredBooks() {
     const query = field('book-search').value.trim().toLowerCase();
@@ -634,7 +666,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.sidebar-nav button').forEach((button) => {
     button.addEventListener('click', () => {
       const section = button.dataset.section;
-      if (section === 'dashboard' || section === 'books') {
+      if (section === 'dashboard') {
+        document.querySelectorAll('.sidebar-nav button').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        showAnalytics();
+      } else if (section === 'books') {
         document.querySelectorAll('.sidebar-nav button').forEach((item) => item.classList.remove('active'));
         button.classList.add('active');
         showDashboard();
@@ -649,10 +685,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   function showDashboard() {
+    analyticsView.hidden = true;
     detailEditorView.hidden = true;
     settingsView.hidden = true;
     dashboardView.hidden = false;
     renderDashboard();
+  }
+
+  function showAnalytics() {
+    dashboardView.hidden = true;
+    detailEditorView.hidden = true;
+    settingsView.hidden = true;
+    analyticsView.hidden = false;
+    analyticsExcludeToggle.checked = isAnalyticsExcluded();
+    refreshAnalytics();
   }
 
   function showSettings() {

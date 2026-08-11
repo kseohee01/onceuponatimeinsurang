@@ -472,6 +472,96 @@ textarea:focus-visible {
   gap: 24px;
 }
 
+.analytics-panel {
+  grid-column: 1 / -1;
+  padding: 22px 24px;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  background: var(--admin-paper);
+}
+
+.dashboard-view > .dashboard-grid > .analytics-panel {
+  display: none;
+}
+
+.analytics-view {
+  overflow: auto;
+}
+
+.analytics-view .analytics-panel + .analytics-panel {
+  margin-top: 20px;
+}
+
+.book-analytics-table-wrap {
+  overflow-x: auto;
+  margin-top: 18px;
+}
+
+.book-analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.book-analytics-table th,
+.book-analytics-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--admin-line);
+  text-align: left;
+  font-size: 13px;
+}
+
+.book-analytics-table th:not(:first-child),
+.book-analytics-table td:not(:first-child) {
+  width: 150px;
+  text-align: right;
+}
+
+.analytics-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.analytics-panel-header h2 {
+  margin: 2px 0 0;
+  font-size: 20px;
+}
+
+.analytics-exclude-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--admin-muted);
+  font-size: 12px;
+}
+
+.analytics-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.analytics-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--admin-bg);
+}
+
+.analytics-card span {
+  color: var(--admin-muted);
+  font-size: 12px;
+}
+
+.analytics-card strong {
+  color: var(--admin-brown-dark);
+  font-size: 26px;
+  font-weight: 600;
+}
+
 .book-list-panel,
 .book-inspector {
   min-width: 0;

@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  recordAnalyticsVisit();
   const views = {
     intro: document.getElementById('view-intro'),
     bookshelf: document.getElementById('view-bookshelf'),
@@ -280,6 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     modal.querySelector('.open-book').style.removeProperty('transform');
     if (!wasOpen) playBookPopupSfx();
     selectedBook = book;
+    if (!wasOpen) recordAnalyticsEvent('popupOpens', book.id);
     setManagedImage(document.getElementById('popup-cover-img'), getPopupCoverSource(book));
     const conceptLabel = book.concept || '페어명';
     document.getElementById('popup-project-label').textContent = conceptLabel;
@@ -758,6 +760,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function renderDetail(book) {
     const renderSequence = ++detailRenderSequence;
+    recordAnalyticsEvent('detailViews', book.id);
     const detailWasActive = views.detail.classList.contains('active');
     selectedBook = book;
     const image = book.detailBgImage || '';

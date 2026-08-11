@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex">
-  <title>이야기 책장 · System Portal</title>
+  <title>수랑고등학교 · System Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Hahmlet:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/admin.css?v=23">
+  <link rel="stylesheet" href="css/admin.css?v=24">
 </head>
 <body>
   <div id="admin-toast" class="admin-toast" role="status" aria-live="polite"></div>
@@ -21,12 +21,12 @@
           <img src="assets/figma/admin-sparkle.svg" alt="">
         </div>
         <p class="login-eyebrow">SYSTEM PORTAL</p>
-        <h1>이야기 책장</h1>
+        <h1>수랑고등학교</h1>
         <p class="login-subtitle">Administrator Login</p>
         <form id="login-form" class="login-form">
           <label>
             <span>아이디 또는 이메일</span>
-            <input id="login-id" name="loginId" type="text" value="manager_clara" autocomplete="username" required>
+            <input id="login-id" name="loginId" type="text" value="kdo" autocomplete="username" required>
           </label>
           <label>
             <span>비밀번호</span>
@@ -53,7 +53,7 @@
       <a class="sidebar-brand" href="index.html" aria-label="공개 책장으로 이동">
         <span class="brand-book">책</span>
         <span>
-          <strong>이야기 책장</strong>
+          <strong>수랑고등학교</strong>
           <small>SYSTEM PANEL</small>
         </span>
       </a>
@@ -78,7 +78,7 @@
       <div class="sidebar-profile">
         <img src="assets/figma/admin-avatar.svg" alt="">
         <span>
-          <strong>클라라 관리자</strong>
+          <strong>관리자</strong>
           <small>System Operator</small>
         </span>
         <button id="logout-button" type="button" aria-label="로그아웃">
@@ -107,6 +107,25 @@
       </header>
 
       <div class="dashboard-grid">
+        <section class="analytics-panel" aria-label="접속자 통계">
+          <div class="analytics-panel-header">
+            <div>
+              <p class="page-kicker">VISITOR ANALYTICS</p>
+              <h2>접속자 통계</h2>
+            </div>
+            <label class="analytics-exclude-toggle">
+              <input id="legacy-analytics-exclude-toggle" type="checkbox">
+              <span>이 브라우저 통계 제외</span>
+            </label>
+          </div>
+          <div class="analytics-cards">
+            <article class="analytics-card"><span>오늘 방문</span><strong id="legacy-analytics-today-visits">-</strong></article>
+            <article class="analytics-card"><span>오늘 순 방문자</span><strong id="legacy-analytics-today-unique">-</strong></article>
+            <article class="analytics-card"><span>최근 30일 방문</span><strong id="legacy-analytics-period-visits">-</strong></article>
+            <article class="analytics-card"><span>최근 30일 순 방문자</span><strong id="legacy-analytics-period-unique">-</strong></article>
+          </div>
+        </section>
+
         <section class="book-list-panel" aria-label="도서 목록">
           <div class="list-toolbar">
             <label class="search-field">
@@ -249,6 +268,32 @@
       </div>
     </main>
 
+    <main id="analytics-view" class="admin-main analytics-view" hidden>
+      <header class="admin-page-header">
+        <div>
+          <p class="page-kicker">VISITOR ANALYTICS</p>
+          <h1>접속자 통계</h1>
+          <p>방문 흐름과 책별 열람 현황을 확인하세요.</p>
+        </div>
+      </header>
+      <section class="analytics-panel analytics-summary-panel">
+        <div class="analytics-panel-header">
+          <div><p class="page-kicker">SITE TRAFFIC</p><h2>사이트 접속 현황</h2></div>
+          <label class="analytics-exclude-toggle"><input id="analytics-exclude-toggle" type="checkbox"><span>이 브라우저 통계 제외</span></label>
+        </div>
+        <div class="analytics-cards">
+          <article class="analytics-card"><span>오늘 방문</span><strong id="analytics-today-visits">-</strong></article>
+          <article class="analytics-card"><span>오늘 순 방문자</span><strong id="analytics-today-unique">-</strong></article>
+          <article class="analytics-card"><span>최근 30일 방문</span><strong id="analytics-period-visits">-</strong></article>
+          <article class="analytics-card"><span>최근 30일 순 방문자</span><strong id="analytics-period-unique">-</strong></article>
+        </div>
+      </section>
+      <section class="analytics-panel book-analytics-panel">
+        <div class="analytics-panel-header"><div><p class="page-kicker">BOOK PERFORMANCE</p><h2>책별 열람 현황</h2></div></div>
+        <div class="book-analytics-table-wrap"><table class="book-analytics-table"><thead><tr><th>책</th><th>팝업 열람</th><th>상세 조회</th></tr></thead><tbody id="book-analytics-body"></tbody></table></div>
+      </section>
+    </main>
+
     <main id="detail-editor-view" class="admin-main detail-editor-view" hidden>
       <header class="admin-page-header detail-editor-header">
         <div class="detail-editor-title">
@@ -375,7 +420,7 @@
   </div>
 
   <script src="js/firebase-config.js?v=1"></script>
-  <script src="js/db.js?v=11"></script>
-  <script src="js/admin.js?v=14"></script>
+  <script src="js/db.js?v=12"></script>
+  <script src="js/admin.js?v=15"></script>
 </body>
 </html>

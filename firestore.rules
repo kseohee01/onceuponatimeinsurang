@@ -19,5 +19,14 @@ service cloud.firestore {
         request.resource.data.updatedAt is int;
       allow delete: if false;
     }
+
+    match /analytics/{documentId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasOnly([
+        'date', 'visits', 'uniqueVisitors', 'updatedAt', 'visitorId', 'lastSeenAt',
+        'bookId', 'popupOpens', 'detailViews'
+      ]) && request.resource.data.date is string;
+      allow delete: if false;
+    }
   }
 }

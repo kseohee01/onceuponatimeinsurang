@@ -23,6 +23,9 @@ const LEGACY_BUBBLE_REFERENCE_HEIGHT = 750;
 const LEGACY_BUBBLE_POSITION_SPACE = 'hero-8x5';
 const MAX_BOOK_IMAGE_SIZE = 15 * 1024 * 1024;
 const BOOK_ASSET_FIELDS = ['spineImage', 'coverImage', 'mobileCoverImage', 'detailBgImage'];
+const ANALYTICS_EXCLUDED_KEY = 'surang_analytics_excluded_v1';
+const ANALYTICS_VISITOR_KEY = 'surang_analytics_visitor_v1';
+const ANALYTICS_COLLECTION = 'analytics';
 
 const DEFAULT_BUBBLE_STYLE = {
   color: '#2DD4BF',
@@ -76,6 +79,125 @@ let cloudBgm = null;
 let cloudUnsubscribe = null;
 let cloudServicesPromise = null;
 let remoteWriteQueue = Promise.resolve();
+
+function getAnalyticsDateKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);
+}
+
+function getAnalyticsVisitorId() {
+  let visitorId = localStorage.getItem(ANALYTICS_VISITOR_KEY);
+  if (!visitorId) {
+    visitorId = globalThis.crypto?.randomUUID?.() || `v-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(ANALYTICS_VISITOR_KEY, visitorId);
+  }
+  return visitorId;
+}
+
+function isAnalyticsExcluded() {
+  return localStorage.getItem(ANALYTICS_EXCLUDED_KEY) === 'true';
+}
+
+function setAnalyticsExcluded(excluded) {
+  localStorage.setItem(ANALYTICS_EXCLUDED_KEY, excluded ? 'true' : 'false');
+  return Boolean(excluded);
+}
+
+async function recordAnalyticsVisit() {
+  if (isAnalyticsExcluded()) return { excluded: true };
+  try {
+    const services = await getCloudServices();
+    const { firestore, database } = services;
+    const dateKey = getAnalyticsDateKey();
+    const visitorId = getAnalyticsVisitorId();
+    const dailyRef = firestore.doc(database, ANALYTICS_COLLECTION, `daily_${dateKey}`);
+    const visitorRef = firestore.doc(database, ANALYTICS_COLLECTION, `visitor_${dateKey}_${visitorId}`);
+    const visitorSnapshot = await firestore.getDoc(visitorRef);
+    const batch = firestore.writeBatch(database);
+    batch.set(dailyRef, {
+      date: dateKey,
+      visits: firestore.increment(1),
+      uniqueVisitors: firestore.increment(visitorSnapshot.exists() ? 0 : 1),
+      updatedAt: Date.now()
+    }, { merge: true });
+    batch.set(visitorRef, { date: dateKey, visitorId, lastSeenAt: Date.now() }, { merge: true });
+    await batch.commit();
+    return { excluded: false, date: dateKey, duplicate: visitorSnapshot.exists() };
+  } catch (error) {
+    console.warn('접속 통계를 저장하지 못했습니다.', error);
+    return { excluded: false, failed: true };
+  }
+}
+
+async function recordAnalyticsEvent(eventName, bookId) {
+  if (isAnalyticsExcluded() || !bookId || !['popupOpens', 'detailViews'].includes(eventName)) return;
+  try {
+    const services = await getCloudServices();
+    const { firestore, database } = services;
+    const safeBookId = String(bookId).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
+    const eventRef = firestore.doc(database, ANALYTICS_COLLECTION, `book_${safeBookId}`);
+    await firestore.setDoc(eventRef, {
+      bookId: String(bookId),
+      [eventName]: firestore.increment(1),
+      updatedAt: Date.now()
+    }, { merge: true });
+  } catch (error) {
+    console.warn('책 열람 통계를 저장하지 못했습니다.', error);
+  }
+}
+
+async function getBookAnalytics(bookIds = []) {
+  try {
+    const services = await getCloudServices();
+    const { firestore, database } = services;
+    const rows = await Promise.all(bookIds.map(async (bookId) => {
+      const safeBookId = String(bookId).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
+      const snapshot = await firestore.getDoc(
+        firestore.doc(database, ANALYTICS_COLLECTION, `book_${safeBookId}`)
+      );
+      const data = snapshot.exists() ? snapshot.data() : {};
+      return {
+        bookId,
+        popupOpens: Number(data.popupOpens) || 0,
+        detailViews: Number(data.detailViews) || 0
+      };
+    }));
+    return rows;
+  } catch (error) {
+    console.warn('책 열람 통계를 불러오지 못했습니다.', error);
+    return [];
+  }
+}
+
+async function getAnalyticsStats(days = 30) {
+  try {
+    const services = await getCloudServices();
+    const { firestore, database } = services;
+    const rows = [];
+    for (let index = 0; index < days; index += 1) {
+      const date = new Date();
+      date.setDate(date.getDate() - index);
+      const dateKey = getAnalyticsDateKey(date);
+      const snapshot = await firestore.getDoc(
+        firestore.doc(database, ANALYTICS_COLLECTION, `daily_${dateKey}`)
+      );
+      const data = snapshot.exists() ? snapshot.data() : {};
+      rows.push({
+        date: dateKey,
+        visits: Number(data.visits) || 0,
+        uniqueVisitors: Number(data.uniqueVisitors) || 0
+      });
+    }
+    return rows;
+  } catch (error) {
+    console.warn('접속 통계를 불러오지 못했습니다.', error);
+    return [];
+  }
+}
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
