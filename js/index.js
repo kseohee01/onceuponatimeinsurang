@@ -29,6 +29,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bgmAutoplayPending = false;
   let detailRenderSequence = 0;
   const detailImagePreloads = new Map();
+  const popupCoverPreloads = new Map();
+  let popupCoverPreloadScheduled = false;
+  let popupCoverPreloadReschedule = false;
   const popupMobileMedia = window.matchMedia('(aspect-ratio < 4 / 5)');
 
   function dismissBookPopupForNavigation() {
@@ -142,6 +145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (name === 'bookshelf') {
       views.bookshelf.classList.remove('shelf-animating');
       renderBookshelf();
+      schedulePopupCoverPreload();
       void views.bookshelf.offsetWidth;
       views.bookshelf.classList.add('shelf-animating');
     }
@@ -288,6 +292,91 @@ document.addEventListener('DOMContentLoaded', async () => {
       return book.mobileCoverImage || book.coverImage || '';
     }
     return book.coverImage || book.mobileCoverImage || '';
+  }
+
+  function preloadPopupCoverSource(source) {
+    if (!source) return Promise.resolve(false);
+    if (popupCoverPreloads.has(source)) return popupCoverPreloads.get(source);
+
+    const preload = new Promise((resolve) => {
+      const image = new Image();
+      let settled = false;
+      const finish = (loaded) => {
+        if (settled) return;
+        settled = true;
+        image.onload = null;
+        image.onerror = null;
+        resolve(loaded);
+      };
+      image.decoding = 'async';
+      image.onload = () => {
+        if (typeof image.decode === 'function') {
+          image.decode().then(() => finish(true), () => finish(true));
+        } else finish(true);
+      };
+      image.onerror = () => finish(false);
+      image.src = source;
+      if (image.complete) finish(image.naturalWidth > 0);
+    });
+
+    popupCoverPreloads.set(source, preload);
+    preload.then((loaded) => {
+      if (!loaded && popupCoverPreloads.get(source) === preload) {
+        popupCoverPreloads.delete(source);
+      }
+    });
+    return preload;
+  }
+
+  async function preloadPopupCoverQueue(sources, concurrency) {
+    const queue = [...new Set(sources.filter(Boolean))];
+    let nextIndex = 0;
+    async function worker() {
+      while (nextIndex < queue.length) {
+        const source = queue[nextIndex];
+        nextIndex += 1;
+        await preloadPopupCoverSource(source);
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, queue.length) }, () => worker())
+    );
+  }
+
+  async function preloadAllPopupCovers() {
+    const books = activeBooks();
+    const preferredSources = books.map(getPopupCoverSource);
+    const alternateSources = books.flatMap((book) => (
+      popupMobileMedia.matches
+        ? [book.coverImage]
+        : [book.mobileCoverImage]
+    ));
+    await preloadPopupCoverQueue(preferredSources, 2);
+    await preloadPopupCoverQueue(alternateSources, 1);
+  }
+
+  function schedulePopupCoverPreload() {
+    if (popupCoverPreloadScheduled) {
+      popupCoverPreloadReschedule = true;
+      return;
+    }
+    popupCoverPreloadScheduled = true;
+    const run = async () => {
+      try {
+        await preloadAllPopupCovers();
+      } finally {
+        popupCoverPreloadScheduled = false;
+        if (popupCoverPreloadReschedule) {
+          popupCoverPreloadReschedule = false;
+          schedulePopupCoverPreload();
+        }
+      }
+    };
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(() => void run(), { timeout: 2500 });
+    } else {
+      window.setTimeout(() => void run(), 900);
+    }
   }
 
   function updatePopupTypography() {
@@ -941,6 +1030,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   renderBookshelf();
+  schedulePopupCoverPreload();
   startAmbientParticles();
   document.body.dataset.view = 'intro';
   updateOrientationButton();
@@ -948,6 +1038,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   subscribeSiteSettings(loadHomepageBgm);
   subscribeBooks(() => {
     renderBookshelf();
+    schedulePopupCoverPreload();
     if (!selectedBook) return;
     const updatedBook = getBookById(selectedBook.id);
     if (!updatedBook || updatedBook.status !== 'active') {
