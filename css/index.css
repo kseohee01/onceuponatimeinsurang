@@ -2987,8 +2987,8 @@ button:focus-visible {
     min-height: 0;
     flex: 0 0 auto;
     max-width: none;
-    max-height: 2.8em;
-    margin: 14px 0 0;
+    max-height: 3.2em;
+    margin: 4px 0 0;
     padding-right: 0;
     overflow: hidden;
     color: #8f6348;
