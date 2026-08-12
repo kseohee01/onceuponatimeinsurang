@@ -2833,8 +2833,8 @@ button:focus-visible {
 
   .popup-page-right {
     position: static;
-    min-height: 225px;
-    flex: 1 0 225px;
+    min-height: 245px;
+    flex: 1 0 245px;
     border-radius: 0;
     box-shadow: none;
   }
@@ -2933,12 +2933,13 @@ button:focus-visible {
     position: relative;
     inset: auto;
     display: flex;
+    box-sizing: border-box;
     height: 100%;
     min-height: 0;
     flex-direction: column;
     /* The OPEN button is absolutely positioned, so reserve its full height
        plus a visual gap instead of letting the copy flow underneath it. */
-    padding: 20px 20px 110px;
+    padding: 16px 20px 118px;
     color: #8f6348;
     text-align: left;
   }
@@ -2986,8 +2987,8 @@ button:focus-visible {
     min-height: 0;
     flex: 0 0 auto;
     max-width: none;
-    max-height: 3.2em;
-    margin: 18px 0 0;
+    max-height: 2.8em;
+    margin: 14px 0 0;
     padding-right: 0;
     overflow: hidden;
     color: #8f6348;
