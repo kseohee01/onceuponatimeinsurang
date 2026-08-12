@@ -2983,17 +2983,18 @@ button:focus-visible {
 
   .popup-divider {
     display: block;
-    /* Figma divider is 372px wide in the 390px frame and intentionally
-       overhangs the 24px content inset by 15px on the left. */
-    width: min(372px, calc(100vw - 18px));
+    /* Match the title/content width so the divider keeps the same left and
+       right breathing room instead of overhanging the text column. */
+    width: 100%;
     flex: 0 0 auto;
     max-width: none;
     /* Keep the SVG's native 16px height; only the horizontal axis may
        stretch to the Figma content width. */
     height: 16px;
-    margin: 0 0 0 -15px;
+    margin: 0;
     aspect-ratio: auto;
     object-fit: contain;
+    opacity: 0.5;
   }
 
   .popup-description {
@@ -3143,7 +3144,7 @@ button:focus-visible {
     max-height: min(38dvh, 300px);
     min-height: 0;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
     padding: 16px;
     overflow: hidden;
     border: 1px solid rgba(247, 227, 204, 0.2);
@@ -3158,29 +3159,30 @@ button:focus-visible {
     position: relative;
     display: flex;
     width: 100%;
-    min-height: 78px;
-    flex: 0 0 78px;
+    min-height: 55px;
+    flex: 0 0 55px;
     flex-direction: column;
     align-items: flex-start;
   }
 
   .detail-characters {
-    margin: 0 0 8px;
+    margin: 0 0 10px;
     color: #f7e3cc;
     font: 12px/normal "Gowun Dodum", sans-serif;
     letter-spacing: 1.5px;
     text-transform: uppercase;
+    transform: translateY(0);
   }
 
   .detail-title {
     position: relative;
     z-index: 1;
     display: flex;
-    height: 48px;
-    flex: 0 0 48px;
+    height: 36px;
+    flex: 0 0 36px;
     align-items: flex-end;
     margin: 0;
-    overflow: hidden;
+    overflow: visible;
     background: linear-gradient(0deg, #fff, #f7e3cc 104%);
     background-clip: text;
     -webkit-background-clip: text;
@@ -3189,6 +3191,7 @@ button:focus-visible {
     line-height: normal;
     white-space: nowrap;
     text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
+    transform: translateY(-8px);
   }
 
   .detail-description {
