@@ -2988,10 +2988,12 @@ button:focus-visible {
     width: min(372px, calc(100vw - 18px));
     flex: 0 0 auto;
     max-width: none;
-    height: 24px;
+    /* Keep the SVG's native 16px height; only the horizontal axis may
+       stretch to the Figma content width. */
+    height: 16px;
     margin: 0 0 0 -15px;
     aspect-ratio: auto;
-    object-fit: fill;
+    object-fit: contain;
   }
 
   .popup-description {
