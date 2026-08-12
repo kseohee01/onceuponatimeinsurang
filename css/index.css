@@ -2824,17 +2824,20 @@ button:focus-visible {
   }
 
   .popup-page-left {
-    height: calc(var(--popup-mobile-cover-height) + 51px);
-    min-height: calc(var(--popup-mobile-cover-height) + 51px);
-    flex: 0 0 calc(var(--popup-mobile-cover-height) + 51px);
+    /* Figma: the info header starts exactly where the 24px top inset and
+       cover artwork end (cover height + 24px), rather than reserving an
+       additional gap below the artwork. */
+    height: calc(var(--popup-mobile-cover-height) + 24px);
+    min-height: calc(var(--popup-mobile-cover-height) + 24px);
+    flex: 0 0 calc(var(--popup-mobile-cover-height) + 24px);
     border-radius: 0;
     box-shadow: none;
   }
 
   .popup-page-right {
     position: static;
-    min-height: 245px;
-    flex: 1 0 245px;
+    min-height: 267px;
+    flex: 1 0 267px;
     border-radius: 0;
     box-shadow: none;
   }
@@ -2939,7 +2942,7 @@ button:focus-visible {
     flex-direction: column;
     /* The OPEN button is absolutely positioned, so reserve its full height
        plus a visual gap instead of letting the copy flow underneath it. */
-    padding: 16px 20px 118px;
+    padding: 16px 24px 118px;
     color: #8f6348;
     text-align: left;
   }
@@ -2947,12 +2950,12 @@ button:focus-visible {
   .popup-characters {
     display: block;
     box-sizing: border-box;
-    width: calc(100% - 36px);
-    min-height: 22px;
-    margin: 0 0 8px;
-    padding: 2px 0;
+    width: 100%;
+    min-height: 17px;
+    margin: 0;
+    padding: 0;
     color: #a47d65;
-    font: 12px/18px "Gowun Dodum", sans-serif;
+    font: 12px/17px "Gowun Dodum", sans-serif;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     white-space: nowrap;
@@ -2964,22 +2967,31 @@ button:focus-visible {
     position: relative;
     z-index: 1;
     box-sizing: border-box;
-    min-height: 46px;
+    min-height: 41px;
     margin: 0;
-    padding-bottom: 4px;
+    padding-bottom: 0;
     background: linear-gradient(0deg, #775a4a, #bc6161 104%);
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
     font-size: 28px;
-    line-height: 1.2;
+    line-height: 41px;
     overflow: visible;
     text-shadow: 0 0 4px rgba(227, 145, 95, 0.5);
     white-space: nowrap;
   }
 
   .popup-divider {
-    display: none;
+    display: block;
+    /* Figma divider is 372px wide in the 390px frame and intentionally
+       overhangs the 24px content inset by 15px on the left. */
+    width: min(372px, calc(100vw - 18px));
+    flex: 0 0 auto;
+    max-width: none;
+    height: 24px;
+    margin: 0 0 0 -15px;
+    aspect-ratio: auto;
+    object-fit: fill;
   }
 
   .popup-description {
@@ -2988,11 +3000,11 @@ button:focus-visible {
     flex: 0 0 auto;
     max-width: none;
     max-height: 3.2em;
-    margin: 4px 0 0;
+    margin: 0;
     padding-right: 0;
     overflow: hidden;
     color: #8f6348;
-    font: 17px/1.6 "Gwendolyn", "Gowun Dodum", cursive;
+    font: 15px/1.6 "Gwendolyn", "Gowun Dodum", cursive;
     text-overflow: ellipsis;
     text-shadow: 0 0 4px rgba(143, 99, 72, 0.25);
     white-space: normal;

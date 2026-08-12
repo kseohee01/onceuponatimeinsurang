@@ -518,6 +518,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const canvasStates = new WeakMap();
     const sunBokehStates = new WeakMap();
     const motionScale = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.35 : 1;
+    const mobileMotionScale = window.matchMedia('(max-width: 767px)').matches ? 0.5 : 1;
     // Keep the ambient motion perceptible at the 30fps render budget. The
     // previous 0.5 scale made a mote travel only a few pixels per second.
     const particleTimeScale = 0.85;
@@ -666,7 +667,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.clearRect(0, 0, state.width, state.height);
 
       state.bokeh.forEach((bokeh) => {
-        const motionTime = time * bokeh.pace * motionScale;
+        const motionTime = time * bokeh.pace * motionScale * mobileMotionScale;
         const x = bokeh.x + Math.sin(motionTime + bokeh.phase) * bokeh.driftX;
         const y = bokeh.y + Math.cos(motionTime * 0.78 + bokeh.phase) * bokeh.driftY;
         const pulse = 0.72 + Math.sin(motionTime * 1.35 + bokeh.phase) * 0.18;
@@ -701,13 +702,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           mote.x = Math.random() * state.width;
           mote.y = state.height + mote.glow;
         }
-        mote.y -= mote.speed * delta * motionScale * particleTimeScale;
+        mote.y -= mote.speed * delta * motionScale * particleTimeScale * mobileMotionScale;
         if (mote.y < -mote.glow) {
           mote.age = 0;
           mote.y = state.height + mote.glow;
           mote.x = Math.random() * state.width;
         }
-        const particleTime = time * particleTimeScale;
+        const particleTime = time * particleTimeScale * mobileMotionScale;
         const x = mote.x + Math.sin(particleTime * 0.00018 + mote.phase) * mote.drift * motionScale;
         const y = mote.y + Math.cos(particleTime * 0.00013 + mote.phase) * 4 * motionScale;
         const cycle = particleTime * 0.001 * Math.PI * 2 / mote.twinkle * motionScale + mote.phase;
