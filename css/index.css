@@ -2987,21 +2987,23 @@ button:focus-visible {
        right breathing room instead of overhanging the text column. */
     width: 100%;
     flex: 0 0 auto;
-    max-width: none;
-    /* Keep the SVG's native 16px height; only the horizontal axis may
-       stretch to the Figma content width. */
-    height: 16px;
+    max-width: 100%;
+    /* Scale the complete ornament to the same width as the description while
+       preserving the SVG's native ratio. Any added height is taken from the
+       flexible description area below. */
+    height: auto;
     margin: 0;
-    aspect-ratio: auto;
-    object-fit: contain;
+    aspect-ratio: 377.773 / 16;
+    object-fit: fill;
     opacity: 0.5;
   }
 
   .popup-description {
     display: -webkit-box;
     min-height: 0;
-    flex: 0 0 auto;
-    max-width: none;
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
     max-height: 3.2em;
     margin: 0;
     padding-right: 0;
