@@ -898,16 +898,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function waitForDetailViewportToSettle({ timeout = 1200, requirePortrait = false } = {}) {
+    return new Promise((resolve) => {
+      const startedAt = performance.now();
+      let previousWidth = 0;
+      let previousHeight = 0;
+      let stableFrames = 0;
+
+      const measure = () => {
+        const width = document.documentElement.clientWidth || window.innerWidth;
+        const height = window.visualViewport?.height || window.innerHeight;
+        const orientationReady = !requirePortrait || width <= height;
+        if (Math.abs(width - previousWidth) < 1 && Math.abs(height - previousHeight) < 1) {
+          stableFrames += 1;
+        } else {
+          stableFrames = 0;
+          previousWidth = width;
+          previousHeight = height;
+        }
+
+        if ((orientationReady && stableFrames >= 3) || performance.now() - startedAt >= timeout) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(measure);
+      };
+
+      requestAnimationFrame(measure);
+    });
+  }
+
+  function applyDetailLandscapeState(enabled) {
+    detailView.classList.toggle('landscape-mode', enabled);
+    document.documentElement.classList.toggle('detail-landscape', enabled);
+    document.body.classList.toggle('detail-landscape', enabled);
+  }
+
   async function setDetailLandscape(enabled, options = {}) {
     const requestedLandscape = Boolean(enabled);
     const orientationSequence = ++detailOrientationSequence;
     detailLandscape = requestedLandscape;
-    detailView.classList.toggle('landscape-mode', detailLandscape);
-    document.documentElement.classList.toggle('detail-landscape', detailLandscape);
-    document.body.classList.toggle('detail-landscape', detailLandscape);
     updateOrientationButton();
 
     if (requestedLandscape) {
+      applyDetailLandscapeState(true);
       try {
         if (!document.fullscreenElement && detailView.requestFullscreen) {
           await detailView.requestFullscreen();
@@ -927,11 +961,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast('기기를 가로로 회전하면 더 크게 볼 수 있습니다.');
       }
     } else {
-      try {
-        screen.orientation?.unlock?.();
-      } catch (error) {
-        console.info('화면 방향 잠금을 해제하지 못했습니다.', error);
-      }
+      // Keep the landscape lock until fullscreen has fully closed. Unlocking
+      // first lets some mobile browsers restore a landscape layout viewport
+      // inside the portrait window, making the entire page appear half-size.
       if (options.exitFullscreen !== false && document.fullscreenElement === detailView) {
         try {
           await document.exitFullscreen();
@@ -939,6 +971,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           console.info('전체 화면을 종료하지 못했습니다.', error);
         }
       }
+      try {
+        screen.orientation?.unlock?.();
+      } catch (error) {
+        console.info('화면 방향 잠금을 해제하지 못했습니다.', error);
+      }
+      await waitForDetailViewportToSettle({ requirePortrait: true });
+      if (orientationSequence !== detailOrientationSequence) return;
+      // Remove the landscape composition only after fullscreen and the
+      // orientation lock are gone. This avoids painting a portrait layout in
+      // the old landscape viewport, whose page scale some browsers preserve.
+      applyDetailLandscapeState(false);
     }
 
     if (orientationSequence === detailOrientationSequence) scheduleDetailRelayout();
