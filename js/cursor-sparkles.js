@@ -23,6 +23,7 @@
   let oldY = 0;
   let viewportWidth = window.innerWidth;
   let viewportHeight = window.innerHeight;
+  let sparkleLayer = null;
 
   function randomColor() {
     return palette[Math.floor(Math.random() * palette.length)];
@@ -41,8 +42,25 @@
   }
 
   function updateViewport() {
+    const previousWidth = viewportWidth;
+    const previousHeight = viewportHeight;
     viewportWidth = document.documentElement.clientWidth || window.innerWidth;
     viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+    if (viewportWidth === previousWidth && viewportHeight === previousHeight) return;
+
+    // A sparkle born in landscape can otherwise remain hundreds of pixels
+    // outside the portrait viewport and enlarge the document's scroll width.
+    // Clear those transient coordinates whenever the viewport changes shape.
+    stars.forEach((star, index) => {
+      star.style.visibility = 'hidden';
+      tiny[index].style.visibility = 'hidden';
+      starVelocity[index] = 0;
+      tinyVelocity[index] = 0;
+    });
+    x = Math.min(x, viewportWidth);
+    y = Math.min(y, viewportHeight);
+    oldX = x;
+    oldY = y;
   }
 
   function moveSparkle(element, nextX, nextY) {
@@ -125,10 +143,15 @@
   }
 
   function initialize() {
+    sparkleLayer = document.createElement('div');
+    sparkleLayer.className = 'cursor-sparkle-layer';
+    sparkleLayer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(sparkleLayer);
+
     for (let index = 0; index < sparkleCount; index += 1) {
       const tinySparkle = createSparkleElement(3, 3, 'cursor-sparkle cursor-sparkle-tiny');
       tinySparkle.style.visibility = 'hidden';
-      document.body.appendChild(tinySparkle);
+      sparkleLayer.appendChild(tinySparkle);
       tiny.push(tinySparkle);
       starVelocity[index] = 0;
       tinyVelocity[index] = 0;
@@ -145,7 +168,7 @@
       horizontalRay.style.top = '2px';
       horizontalRay.style.left = '0px';
       star.append(verticalRay, horizontalRay);
-      document.body.appendChild(star);
+      sparkleLayer.appendChild(star);
       stars.push(star);
     }
 
@@ -155,8 +178,8 @@
 
   function updatePointerPosition(event) {
     if (event.pointerType === 'touch') return;
-    x = event.pageX ?? event.clientX + window.scrollX;
-    y = event.pageY ?? event.clientY + window.scrollY;
+    x = event.clientX;
+    y = event.clientY;
   }
 
   document.addEventListener('pointermove', updatePointerPosition, { passive: true });
