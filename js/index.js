@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const shelfSceneStage = document.querySelector('.shelf-scene-stage');
   const shelfLayoutStage = document.querySelector('.shelf-layout-stage');
   const bgmAudio = document.getElementById('site-bgm-audio');
+  const bundledBgmUrl = 'assets/audio/sweet-lullaby.mp3';
   const bookPopupSfx = document.getElementById('book-popup-sfx');
   const uiClickSfx = document.getElementById('ui-click-sfx');
   const bgmWidgets = [...document.querySelectorAll('.site-bgm-widget')];
@@ -31,6 +32,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let bgmLoadSequence = 0;
   let bgmPlayRequested = true;
   let bgmAutoplayPending = false;
+  let usingBundledBgm = false;
+  let bundledBgmAttempted = false;
   let detailRenderSequence = 0;
   const detailImagePreloads = new Map();
   const popupCoverPreloads = new Map();
@@ -925,6 +928,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  async function activateBundledBgm() {
+    if (usingBundledBgm || bundledBgmAttempted) return false;
+    bundledBgmAttempted = true;
+    usingBundledBgm = true;
+    if (bgmObjectUrl) URL.revokeObjectURL(bgmObjectUrl);
+    bgmObjectUrl = '';
+    bgmAudio.src = new URL(bundledBgmUrl, document.baseURI).href;
+    bgmAudio.autoplay = true;
+    bgmAudio.loop = true;
+    bgmAudio.load();
+    if (bgmPlayRequested) return tryPlayBgm();
+    updateBgmWidgets();
+    return true;
+  }
+
   async function tryPlayBgm() {
     if (!bgmAudio.src) {
       bgmAutoplayPending = false;
@@ -936,6 +954,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       bgmAutoplayPending = false;
       return true;
     } catch (error) {
+      if (error?.name !== 'NotAllowedError' && !usingBundledBgm) {
+        return activateBundledBgm();
+      }
       bgmAutoplayPending = bgmPlayRequested;
       updateBgmWidgets();
       return false;
@@ -977,12 +998,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       bgmName = loadedName;
       bgmUpdatedAt = loadedUpdatedAt;
       if (!bgm.url && !bgm.blob) {
-        bgmAutoplayPending = false;
-        bgmAudio.removeAttribute('src');
-        bgmAudio.load();
-        updateBgmWidgets();
+        await activateBundledBgm();
         return;
       }
+      usingBundledBgm = false;
+      bundledBgmAttempted = false;
       if (bgm.url) {
         bgmAudio.src = bgm.url;
       } else {
@@ -996,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       else updateBgmWidgets();
     } catch (error) {
       console.warn('홈페이지 BGM을 불러오지 못했습니다.', error);
-      updateBgmWidgets();
+      await activateBundledBgm();
     }
   }
 
@@ -1044,7 +1064,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   bgmAudio.addEventListener('play', updateBgmWidgets);
   bgmAudio.addEventListener('pause', updateBgmWidgets);
-  bgmAudio.addEventListener('error', updateBgmWidgets);
+  bgmAudio.addEventListener('error', () => {
+    if (!usingBundledBgm) {
+      activateBundledBgm();
+      return;
+    }
+    updateBgmWidgets();
+  });
   bgmAudio.addEventListener('canplay', () => {
     if (document.body.dataset.view === 'intro' && bgmPlayRequested && bgmAudio.paused) {
       tryPlayBgm();
