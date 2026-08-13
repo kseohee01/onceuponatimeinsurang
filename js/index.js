@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let selectedBook = null;
   let uiVisible = true;
   let detailLandscape = false;
+  let detailOrientationSequence = 0;
+  let detailRelayoutTimers = [];
   let toastTimer = null;
   let viewTransitionTimer = null;
   let popupCloseTimer = null;
@@ -881,20 +883,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     button.querySelector('.orientation-label').textContent = detailLandscape ? '세로 보기' : '가로 보기';
   }
 
+  function scheduleDetailRelayout() {
+    detailRelayoutTimers.forEach(clearTimeout);
+    detailRelayoutTimers = [];
+
+    // Mobile browsers restore the address bar and dynamic viewport in several
+    // steps after fullscreen. Keep measuring until portrait has fully settled.
+    [0, 80, 180, 360, 640].forEach((delay) => {
+      detailRelayoutTimers.push(window.setTimeout(() => {
+        updateIntroBookScale();
+        updatePopupScale();
+        updateBubbleLayout();
+      }, delay));
+    });
+  }
+
   async function setDetailLandscape(enabled, options = {}) {
-    detailLandscape = Boolean(enabled);
+    const requestedLandscape = Boolean(enabled);
+    const orientationSequence = ++detailOrientationSequence;
+    detailLandscape = requestedLandscape;
     detailView.classList.toggle('landscape-mode', detailLandscape);
     document.documentElement.classList.toggle('detail-landscape', detailLandscape);
     document.body.classList.toggle('detail-landscape', detailLandscape);
     updateOrientationButton();
 
-    if (detailLandscape) {
+    if (requestedLandscape) {
       try {
         if (!document.fullscreenElement && detailView.requestFullscreen) {
           await detailView.requestFullscreen();
         }
       } catch (error) {
         console.info('전체 화면을 사용할 수 없어 페이지 내부 가로 보기로 전환합니다.', error);
+      }
+      // Portrait may be requested while requestFullscreen() is still pending.
+      // Do not allow that older landscape request to lock the screen later.
+      if (orientationSequence !== detailOrientationSequence || !detailLandscape) {
+        scheduleDetailRelayout();
+        return;
       }
       try {
         if (screen.orientation?.lock) await screen.orientation.lock('landscape');
@@ -916,7 +941,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    requestAnimationFrame(updateBubbleLayout);
+    if (orientationSequence === detailOrientationSequence) scheduleDetailRelayout();
   }
 
   function updateBgmWidgets() {
@@ -1090,8 +1115,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (event.persisted) resetTransientNavigationState();
   });
   document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && detailLandscape) setDetailLandscape(false, { exitFullscreen: false });
+    if (!document.fullscreenElement && detailLandscape) {
+      setDetailLandscape(false, { exitFullscreen: false });
+      return;
+    }
+    scheduleDetailRelayout();
   });
+  window.addEventListener('orientationchange', scheduleDetailRelayout, { passive: true });
+  screen.orientation?.addEventListener?.('change', scheduleDetailRelayout);
+  window.visualViewport?.addEventListener('resize', scheduleDetailRelayout, { passive: true });
   window.addEventListener('resize', () => {
     updateIntroBookScale();
     updatePopupScale();
